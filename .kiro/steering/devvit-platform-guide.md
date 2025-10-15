@@ -8,6 +8,48 @@ inclusion: always
 
 Developers are building interactive apps and games that run inside Reddit posts using standard web technologies. These apps appear in a webview within posts and can be played by Reddit users directly on the platform.
 
+## CRITICAL: Understanding the Devvit Splash Screen
+
+**The Devvit splash screen IS the Reddit post itself - it is NOT part of your webview/React app.**
+
+### How It Works:
+
+1. **User browses Reddit** → Sees your post with the splash screen (heading, description, button)
+2. **User clicks the button** → Opens the webview with your React/client app
+3. **Your React app loads** → Should go DIRECTLY to the main experience
+
+### Common Mistake to Avoid:
+
+❌ **WRONG**: Creating a duplicate "splash screen" in your React app that shows the same info as the Devvit splash
+- This creates a confusing double-splash experience
+- Users already saw the post info on Reddit before clicking
+
+✅ **CORRECT**: Your React app should start immediately with the main experience
+- No duplicate splash screens
+- The Devvit splash (configured in `submitCustomPost`) is the ONLY splash users see
+- Your React app is what loads AFTER they click the button on that splash
+
+### Example:
+
+```typescript
+// In server/core/post.ts - This creates the Reddit post with splash
+await reddit.submitCustomPost({
+  splash: {
+    heading: '🏜️ Dig Site: r/AskReddit',  // Users see this ON REDDIT
+    description: 'Excavate historical posts',
+    buttonLabel: 'Start Digging ⛏️',
+  },
+  // ...
+});
+
+// In client/App.tsx - This loads AFTER clicking the button
+export const App = () => {
+  // ❌ DON'T create another splash screen here
+  // ✅ DO load the game/app directly
+  return <GameCanvas />;
+};
+```
+
 ## Project Structure
 
 All Devvit Web projects follow this structure:
@@ -57,7 +99,9 @@ package.json    # npm scripts and dependencies
 2. Devvit automatically creates a test subreddit (e.g., `r/my-app_dev`)
 3. Provides a playtest URL (e.g., `https://www.reddit.com/r/my-app_dev?playtest=my-app`)
 4. Developer opens URL in browser to test the app
-5. App appears in a post with "Launch App" button
+5. **Create a post** using the moderator menu (three dots on the subreddit)
+6. **The post shows the Devvit splash screen** with your configured heading, description, and button
+7. **Click the button** to open the webview and test your React app
 
 ### Important Testing Notes
 

@@ -13,7 +13,7 @@ Diggit Game is a mobile-first archaeology experience that transforms Reddit's hi
 - Randomized biomes (grass, rock, sand, swamp) themed to match the target subreddit's colors
 - Community stats showing total artifacts found and broken by all players at this dig site
 - 5% chance to discover subreddit relics that unlock new dig sites
-- Immediate gameplay - no splash screen, game starts automatically when you open the post
+- Immediate gameplay - the game starts automatically when you open the post
 
 **Museum Posts (Type B)**: Your personal collection and progression hub
 - Displays all artifacts you've discovered across all dig sites
@@ -23,18 +23,18 @@ Diggit Game is a mobile-first archaeology experience that transforms Reddit's hi
 - Subreddit relics displayed as glowing icons on pedestals
 - Tap relics to create new dig sites for those subreddits
 
-The game uses intelligent routing to automatically detect which post type you're viewing. When you open any Diggit Game post, a polished loading screen with an animated blue spinner appears while the app fetches the post type from the server, then seamlessly loads either the dig site excavation game (which starts immediately) or your personal museum.
+The game uses intelligent routing to automatically detect which post type you're viewing. When you open any Diggit Game post, a polished loading screen with an animated blue spinner appears while the app fetches the post type from the server, then seamlessly loads either the dig site excavation game or your personal museum.
 
 ### What Makes This Game Innovative?
 
 1. **Reddit History as Gameplay**: Transforms Reddit's vast archive into discoverable artifacts, giving new life to forgotten posts (6+ months old with engagement). Every artifact is real Reddit content with actual titles, authors, thumbnails, and post dates.
 
-2. **Immediate Gameplay**: No splash screens or menus - the game starts automatically when you open a dig site post. You're instantly dropped into the excavation scene with tools ready to use.
+2. **Immediate Gameplay**: The game starts automatically when you open a dig site post. You're instantly dropped into the excavation scene with tools ready to use - no duplicate splash screens or menus.
 
 3. **Tactile Tool System**: Three distinct excavation tools with realistic mechanics:
-   - **Detector (📡)**: Tap and hold to scan for artifacts. Get proximity feedback with color-coded expanding circles (red=far, orange=closer, yellow=near, green=very close) and pitch-varying beep sounds that guide you to the buried treasure
+   - **Detector (📡)**: Tap and hold to scan for artifacts. Get proximity feedback with color-coded expanding circles (red=far, orange=closer, yellow=near, green=very close) and pitch-varying beep sounds (200Hz-800Hz) that guide you to the buried treasure
    - **Shovel (⛏️)**: Fast digging (removes 10 depth units in 15px radius) with 500ms cooldown. Hitting artifacts shows a red crack warning (X pattern), and hitting the same spot twice breaks them permanently
-   - **Brush (🖌️)**: Slow, safe removal (1 depth unit/second in 8px radius) that can't damage artifacts. Creates dust particle effects that float upward and provides light haptic feedback (10ms vibration)
+   - **Brush (🖌️)**: Slow, safe removal (1 depth unit/second in 8px radius) that can't damage artifacts. Creates dust particle effects that float upward and provides light haptic feedback (10ms vibration on supported devices)
 
 4. **Dynamic Subreddit Theming**: Each dig site automatically adapts to its target subreddit's visual identity (primary colors, icons, biome type), making every excavation feel unique and connected to that community
 
@@ -48,7 +48,7 @@ The game uses intelligent routing to automatically detect which post type you're
 
 9. **Dual Post Architecture**: Dig sites (Type A) for gameplay and museums (Type B) for collection create a natural progression loop - play → discover → collect → unlock → play new sites
 
-10. **Mobile-First Touch Controls**: Optimized for 1-2 minute play sessions on mobile with thumb-friendly tool buttons in a floating dock at the bottom (black background with 70% opacity, rounded full design), responsive touch handling, and haptic feedback (vibration on supported devices)
+10. **Mobile-First Touch Controls**: Optimized for 1-2 minute play sessions on mobile with thumb-friendly tool buttons (64x64px) in a floating dock at the bottom (black background with 70% opacity, rounded full design), responsive touch handling, and haptic feedback
 
 11. **Persistent Progression**: All discoveries saved to your personal museum via Redis, community stats tracked per dig site, and unlocked subreddits persist across sessions. Artifacts are cached per session (1-hour TTL) to prevent them from changing mid-excavation
 
@@ -67,10 +67,11 @@ The game uses intelligent routing to automatically detect which post type you're
 
 #### Getting Started
 
-1. **Find a Dig Site Post**: Look for Diggit Game posts in your Reddit feed - they'll show the target subreddit (e.g., "🏜️ Dig Site: r/aww") with community stats in the post title or description
-2. **Open the Post**: Click on the post to open it in Reddit
-3. **Loading Screen**: You'll see a polished loading screen with an animated blue spinner and "Loading game..." text while the dig site initializes
-4. **Instant Gameplay**: The game starts automatically! No splash screen or "Enter" button - you're immediately dropped into the excavation scene with your tools ready
+1. **Find a Dig Site Post**: Look for Diggit Game posts in your Reddit feed - they'll show the target subreddit (e.g., "🏜️ Dig Site: r/aww") with community stats
+2. **Click the Post**: Click on the post to open it in Reddit - you'll see the splash screen with the dig site information
+3. **Click "Start Digging"**: Click the button on the splash screen to open the webview
+4. **Loading Screen**: You'll see a polished loading screen with an animated blue spinner and "Loading game..." text while the dig site initializes
+5. **Instant Gameplay**: The game starts automatically! You're immediately dropped into the excavation scene with your tools ready
 
 #### Excavation Gameplay (Dig Site Posts)
 
@@ -85,7 +86,7 @@ The game displays a top-down 2D view of a 100x100 cell dig area rendered on an H
 
 **Using the Three Tools:**
 
-The tool dock appears at the bottom center of the screen in a floating black bar (70% opacity, rounded full design) with three circular buttons. The active tool is highlighted with an orange background, scale effect (110%), and orange shadow glow.
+The tool dock appears at the bottom center of the screen in a floating black bar (70% opacity, rounded full design) with three circular buttons (64x64px each). The active tool is highlighted with an orange background, scale effect (110%), and orange shadow glow.
 
 1. **Detector Tool (📡 Locate Artifacts)**:
    - **How to Use**: Tap the detector button to select it, then tap and hold anywhere on the dig area to scan
@@ -168,22 +169,24 @@ The tool dock appears at the bottom center of the screen in a floating black bar
 #### Pro Tips
 
 - **Start with the Detector**: Always scan the area first to locate the artifact before digging - this saves time and prevents accidental breaks
-- **Shovel for Speed**: Use the shovel to quickly remove dirt far from the artifact (when detector shows red/orange)
-- **Switch to Brush Near Artifacts**: Once you're close (green detector readings), switch to the brush for safe excavation
+- **Shovel for Speed**: Use the shovel to quickly remove dirt far from the artifact (when detector shows red/orange circles)
+- **Switch to Brush Near Artifacts**: Once you're close (green/yellow detector readings), switch to the brush for safe excavation
 - **Watch the Uncovering**: The artifact silhouette appears when you're within 8 layers - dig carefully around it to maximize uncovered percentage
-- **Avoid Double-Hitting**: If you see red crack lines, you've hit the artifact once - don't hit that spot again or it will break!
+- **Avoid Double-Hitting**: If you see red crack lines (X pattern), you've hit the artifact once - don't hit that spot again or it will break!
 - **Collect Relics**: The 5% relic chance unlocks new subreddits to explore - these are rare and valuable
 - **Build Your Museum**: Every discovery adds to your permanent collection stored in Redis
 
 #### Important Notes
 
-- **Mobile Optimized**: Designed for 1-2 minute play sessions on mobile with thumb-friendly tool buttons in a floating dock
+- **Immediate Gameplay**: After clicking the splash screen button, you're dropped straight into the excavation scene - no duplicate splash or menus
+- **Mobile Optimized**: Designed for 1-2 minute play sessions on mobile with thumb-friendly tool buttons (64x64px) in a floating dock at the bottom
 - **Persistent Progress**: All discoveries saved to your museum via Redis, accessible anytime
 - **Per-Session Artifacts**: Each dig site has a unique artifact cached for 1 hour - it won't change mid-excavation but will be different on your next visit
 - **Community Experience**: Dig site stats show collective player progress across all players
 - **Real Reddit Content**: Every artifact is a real historical post from Reddit's archives (6+ months old with 10+ score)
 - **Touch Controls**: Optimized for touch input with pointer events (pointerdown, pointermove, pointerup)
-- **Canvas Rendering**: Uses HTML5 Canvas with 2D context for smooth real-time rendering at 60fps
+- **Canvas Rendering**: Uses HTML5 Canvas with 2D context for smooth real-time rendering
+- **Responsive Design**: Canvas automatically scales to fit your screen with proper device pixel ratio handling
 
 ### For Moderators
 

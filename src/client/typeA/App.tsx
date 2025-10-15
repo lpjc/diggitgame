@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { fetchAPI } from '../shared/utils/api';
 import { DigSiteData } from '../../shared/types/game';
 import { GameEngine } from './game/GameEngine';
+import { DigSceneRenderer } from './game/DigSceneRenderer';
 import { ToolManager } from './game/tools/ToolManager';
 import { DetectorTool } from './game/tools/DetectorTool';
 import { ShovelTool } from './game/tools/ShovelTool';
@@ -50,6 +51,17 @@ export const App = () => {
     const engine = new GameEngine(canvas);
     const artifactSystem = new ArtifactSystem(digSiteData.artifact);
 
+    // Set up the dirt layer and artifact
+    engine.setDirtLayer(engine.getState().dirtLayer);
+    engine.setArtifact(digSiteData.artifact);
+
+    // Create renderer
+    const renderer = new DigSceneRenderer(ctx);
+    (engine as any).biome = digSiteData.biome;
+    (engine as any).dirtMaterials = digSiteData.dirtMaterials;
+    (engine as any).borderColor = digSiteData.borderColor;
+    engine.setRenderer(renderer);
+
     // Initialize tool manager
     const toolManager = new ToolManager({
       dirtLayer: engine.getState().dirtLayer,
@@ -71,6 +83,34 @@ export const App = () => {
     toolManager.registerTool(new ShovelTool());
     toolManager.registerTool(new BrushTool());
 
+    engine.setToolManager(toolManager);
+
+    // Set up pointer events
+    const handlePointerDown = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      toolManager.handlePointerDown(x, y);
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      toolManager.handlePointerMove(x, y);
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      toolManager.handlePointerUp(x, y);
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+
     gameEngineRef.current = engine;
     toolManagerRef.current = toolManager;
     artifactSystemRef.current = artifactSystem;
@@ -79,6 +119,13 @@ export const App = () => {
     engine.start();
 
     setGameStarted(true);
+
+    // Cleanup
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerup', handlePointerUp);
+    };
   };
 
   const handleToolSelect = (tool: 'detector' | 'shovel' | 'brush') => {

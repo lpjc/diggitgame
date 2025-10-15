@@ -39,9 +39,14 @@ When implementing features or components:
 - **Never change the project name**: The project name in devvit.json and package.json must remain unchanged - Devvit requires this for deployment
 - **Preserve project structure**: Maintain the standard Devvit folder structure (src/client, src/server, src/shared)
 
-### Customized Splash Screen
+### Devvit Splash Screen (CRITICAL)
 
-- **Create engaging splash screens**: The user will always see a splash screen on the Reddit feed with a "Play" button to open the app in full screen. Customize the splash screen so it stands out and invites the player to play
+- **The splash screen IS the Reddit post**: When you call `reddit.submitCustomPost()` with a `splash` config, that creates the Reddit post users see BEFORE clicking
+- **Do NOT duplicate the splash in React**: Your client app should NOT show another splash screen with the same info - users already saw it on Reddit
+- **Splash shows on Reddit feed**: The heading, description, and button you configure appear as the post itself on Reddit
+- **Button opens webview**: When users click the splash button, it opens your React app in a webview
+- **React app = main experience**: Your client code should go directly to the game/app, not show another splash
+- **Make splash engaging**: Customize the splash (heading, description, button text) to stand out and invite users to click
 
 ## Mobile-First Design
 

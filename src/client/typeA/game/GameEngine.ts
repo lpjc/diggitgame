@@ -50,7 +50,7 @@ export class GameEngine {
     for (let y = 0; y < height; y++) {
       cells[y] = [];
       for (let x = 0; x < width; x++) {
-        cells[y][x] = 60; // Max depth
+        cells[y]![x] = 60; // Max depth
       }
     }
 
@@ -121,6 +121,11 @@ export class GameEngine {
     // Update game logic based on current phase
     if (this.state.phase === 'playing') {
       this.updateUncoveredPercentage();
+      
+      // Update tool manager
+      if ((this as any).toolManager) {
+        (this as any).toolManager.update(deltaTime);
+      }
     }
   }
 
@@ -134,7 +139,8 @@ export class GameEngine {
     for (let y = position.y; y < position.y + height && y < dirtLayer.height; y++) {
       for (let x = position.x; x < position.x + width && x < dirtLayer.width; x++) {
         totalCells++;
-        if (dirtLayer.cells[y][x] <= depth + 8) {
+        const cell = dirtLayer.cells[y]?.[x];
+        if (cell !== undefined && cell <= depth + 8) {
           uncoveredCells++;
         }
       }
@@ -143,67 +149,30 @@ export class GameEngine {
     this.state.uncoveredPercentage = totalCells > 0 ? (uncoveredCells / totalCells) * 100 : 0;
   }
 
+  public setRenderer(renderer: any): void {
+    (this as any).renderer = renderer;
+  }
+
+  public setToolManager(toolManager: any): void {
+    (this as any).toolManager = toolManager;
+  }
+
   private render(): void {
     const rect = this.canvas.getBoundingClientRect();
     this.ctx.clearRect(0, 0, rect.width, rect.height);
 
     // Render based on current phase
-    switch (this.state.phase) {
-      case 'splash':
-        this.renderSplash();
-        break;
-      case 'playing':
-        this.renderGame();
-        break;
-      case 'discovered':
-        this.renderDiscovery();
-        break;
-      case 'museum_preview':
-        this.renderMuseumPreview();
-        break;
+    const renderer = (this as any).renderer;
+    if (this.state.phase === 'playing' && renderer) {
+      renderer.render(
+        this.state.dirtLayer,
+        (this as any).biome,
+        (this as any).dirtMaterials,
+        (this as any).borderColor,
+        this.state.artifact,
+        this.state.uncoveredPercentage
+      );
     }
-  }
-
-  private renderSplash(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    this.ctx.fillStyle = '#f0f0f0';
-    this.ctx.fillRect(0, 0, rect.width, rect.height);
-    this.ctx.fillStyle = '#333';
-    this.ctx.font = '24px sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('Loading...', rect.width / 2, rect.height / 2);
-  }
-
-  private renderGame(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    this.ctx.fillStyle = '#8B7355';
-    this.ctx.fillRect(0, 0, rect.width, rect.height);
-    
-    // Placeholder for actual game rendering
-    this.ctx.fillStyle = '#fff';
-    this.ctx.font = '16px sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('Dig Site Active', rect.width / 2, 30);
-  }
-
-  private renderDiscovery(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    this.ctx.fillStyle = '#FFD700';
-    this.ctx.fillRect(0, 0, rect.width, rect.height);
-    this.ctx.fillStyle = '#333';
-    this.ctx.font = '24px sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('Discovery!', rect.width / 2, rect.height / 2);
-  }
-
-  private renderMuseumPreview(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    this.ctx.fillStyle = '#e0e0e0';
-    this.ctx.fillRect(0, 0, rect.width, rect.height);
-    this.ctx.fillStyle = '#333';
-    this.ctx.font = '20px sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('Museum Preview', rect.width / 2, rect.height / 2);
   }
 
   public destroy(): void {
