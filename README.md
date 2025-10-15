@@ -6,9 +6,10 @@ A dual-mode interactive counter game built on Reddit's Devvit platform, featurin
 
 Diggit Game is a multi-post-type Devvit application that showcases the power of Reddit's developer platform through two unique game modes. At its core, it's an interactive counter where players can increment and decrement a shared value, but it goes beyond simple counting by integrating live Reddit community data and user information.
 
-The game uses intelligent routing to automatically detect which post type you're viewing and render the appropriate experience - all from a single unified codebase. When you click the splash screen on any Diggit Game post, the app fetches your post type from the server and instantly loads the correct game mode.
+The game uses intelligent routing to automatically detect which post type you're viewing and render the appropriate experience - all from a single unified codebase. When you click the splash screen on any Diggit Game post, the app displays a polished loading screen with an animated spinner while it fetches your post type from the server, then instantly loads the correct game mode.
 
 **Type A (Classic Mode)**: A clean, minimalist counter experience featuring:
+
 - Reddit orange-themed circular buttons with smooth hover effects
 - Clean white background for distraction-free gameplay
 - Your Reddit username displayed prominently with a friendly greeting
@@ -17,6 +18,7 @@ The game uses intelligent routing to automatically detect which post type you're
 - Simple, intuitive interface perfect for quick interactions
 
 **Type B (Advanced Mode)**: An enhanced visual experience with:
+
 - Beautiful purple-to-blue gradient background creating an immersive atmosphere
 - Purple-themed circular buttons matching the gradient aesthetic
 - All Type A features plus hot post previews from the community
@@ -31,19 +33,21 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 
 1. **Intelligent Multi-Post Architecture**: Demonstrates advanced Devvit capabilities with a unified entry point that dynamically routes to different game modes based on post type, eliminating code duplication while maintaining distinct experiences
 
-2. **Centralized Data Layer**: Unified Express server with RESTful API endpoints (`/api/init`, `/api/increment`, `/api/decrement`, `/api/data-feed`) that provide both game modes with consistent access to Reddit data
+2. **Polished Loading Experience**: Features a custom loading screen with animated spinner and gradient background that provides visual feedback while the game initializes, creating a professional first impression
 
-3. **User Action Capabilities**: Built-in infrastructure for players to create posts and comments on their own behalf with proper consent flows (via UserActionDialog component), enabling future social features
+3. **Centralized Data Layer**: Unified Express server with RESTful API endpoints (`/api/init`, `/api/increment`, `/api/decrement`, `/api/data-feed`) that provide both game modes with consistent access to Reddit data
 
-4. **Live Reddit Integration**: Real-time display of subreddit statistics, user karma, and hot posts fetched directly from Reddit's API through the server layer - no external API calls needed
+4. **User Action Capabilities**: Built-in infrastructure for players to create posts and comments on their own behalf with proper consent flows (via UserActionDialog component), enabling future social features
 
-5. **Mobile-First Design**: Responsive layouts with touch-optimized circular buttons, designed for Reddit's mobile-first user base with proper viewport settings preventing zoom
+5. **Live Reddit Integration**: Real-time display of subreddit statistics, user karma, and hot posts fetched directly from Reddit's API through the server layer - no external API calls needed
 
-6. **Persistent State Management**: Counter values stored per-post in Redis, maintaining game state across sessions and users - your progress is never lost
+6. **Mobile-First Design**: Responsive layouts with touch-optimized circular buttons, designed for Reddit's mobile-first user base with proper viewport settings preventing zoom
 
-7. **Type-Safe Architecture**: End-to-end TypeScript with shared types between client and server, ensuring API contract consistency and catching errors at compile time
+7. **Persistent State Management**: Counter values stored per-post in Redis, maintaining game state across sessions and users - your progress is never lost
 
-8. **Seamless User Experience**: Single HTML entry point with React-based routing eliminates loading delays between post types, providing instant gameplay
+8. **Type-Safe Architecture**: End-to-end TypeScript with shared types between client and server, ensuring API contract consistency and catching errors at compile time
+
+9. **Seamless User Experience**: Single HTML entry point with React-based routing eliminates loading delays between post types, providing instant gameplay after initial load
 
 ### Technology Stack
 
@@ -59,22 +63,24 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 ### For Players
 
 #### Getting Started
+
 1. **Find a Game Post**: Look for Diggit Game posts in your Reddit feed - they'll appear as either "Type A Game Post" or "Type B Game Post"
 2. **Launch the Game**: Click the splash screen button (e.g., "Launch Type A" or "Launch Type B") to open the full-screen webview
-3. **Automatic Loading**: The game automatically detects which post type you're viewing and loads the appropriate experience
-4. **Wait for Initialization**: The app fetches your Reddit username, current counter value, and community data (usually takes 1-2 seconds)
+3. **Loading Screen**: You'll see a polished loading screen with an animated blue spinner and "Loading game..." text while the app initializes
+4. **Automatic Detection**: The game automatically detects which post type you're viewing and loads the appropriate experience
+5. **Wait for Initialization**: The app fetches your Reddit username, current counter value, and community data (usually takes 1-2 seconds)
 
 #### Playing the Game
 
 **Basic Counter Mechanics:**
 
-1. **Increment the Counter**: 
+1. **Increment the Counter**:
    - Tap or click the `+` button (large circular button on the right side)
    - The counter increases by 1
    - The new value is immediately saved to Redis and persists across sessions
    - Button is disabled during the API call to prevent double-clicks
-   
 2. **Decrement the Counter**:
+
    - Tap or click the `-` button (large circular button on the left side)
    - The counter decreases by 1
    - The new value is immediately saved to Redis
@@ -88,16 +94,17 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 **Viewing Your Profile and Community Data:**
 
 4. **See Your Reddit Identity**:
+
    - Your Reddit username appears at the top of the screen once loaded
    - **Type A**: Displays "Hey [username] 👋" in a friendly greeting
    - **Type B**: Displays "Welcome [username]! 🎮" with a gaming theme
 
 5. **Explore Community Information**:
+
    - **Type A**: A clean white card shows:
      - Subreddit name (e.g., "r/diggitgame_dev")
      - Total subscriber count
      - Your personal karma score
-   
    - **Type B**: An enhanced frosted glass card shows:
      - Subreddit name and subscriber count
      - Your personal karma score
@@ -112,7 +119,8 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 
 **Visual Differences Between Modes:**
 
-- **Type A (Classic)**: 
+- **Type A (Classic)**:
+
   - White background for clean, distraction-free gameplay
   - Reddit orange buttons (#d93900) with hover effects
   - Simple card design with subtle shadows
@@ -138,11 +146,13 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 ### For Moderators
 
 #### Installing the App
+
 1. Navigate to your subreddit's mod tools
 2. Install Diggit Game from the Devvit app directory (or deploy it using `npm run deploy`)
 3. The app will automatically create an initial Type A post on installation via the `onAppInstall` trigger
 
 #### Creating Game Posts
+
 1. **Open Mod Menu**: Access your subreddit's moderator menu (three dots menu on desktop, or mod tools on mobile)
 2. **Choose Game Mode**:
    - Select **"Create PostA"** for the classic minimalist experience with clean white background
@@ -157,6 +167,7 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
    - Initial counter value set to 0
 
 #### Managing Multiple Posts
+
 - Create as many game posts as you want (both Type A and Type B)
 - Each post maintains its own independent counter state in Redis (key: `count` per post context)
 - Players can interact with multiple posts simultaneously without conflicts
@@ -170,6 +181,7 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 #### Type A - Classic Mode
 
 **Visual Style:**
+
 - Clean white background for distraction-free gameplay
 - Reddit orange (#d93900) circular buttons with hover effects (#c03300)
 - Minimalist design with subtle shadows
@@ -178,30 +190,66 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 - Snoo mascot image at the top
 
 **Features:**
-- Large circular counter buttons (56px × 56px) with `-` and `+` symbols
-- Counter display in the center (1.8em font size
-  - Your personal karma score
-- Footer with quick links to Devvit resources
 
-**Best For:** Quick interactions, casual gameplay, users who prefer simplicity
+- Large circular counter buttons (56px × 56px) with `-` and `+` symbols
+- Counter display in the center (1.8em font size) showing current value
+- Reddit username greeting: "Hey [username] 👋"
+- Descriptive text: "This is Type A Post - Classic game mode"
+- Subreddit information card with white background and shadow:
+  - Subreddit name (e.g., "r/diggitgame_dev")
+  - Subscriber count
+  - Your personal karma score
+- Footer with quick links to Devvit resources (Docs, r/Devvit, Discord)
+- Loading state shows "..." in counter during API calls
+- Buttons disabled during loading to prevent double-clicks
+
+**Technical Details:**
+
+- Entry point: `typeA.html`
+- Splash screen: "Welcome to Type A!" with "Launch Type A" button
+- Post type identifier: `typeA` stored in Redis
+
+**Best For:** Quick interactions, casual gameplay, users who prefer simplicity and clean design
 
 #### Type B - Advanced Mode
+
 **Visual Style:**
-- Gradient background (purple-to-blue)
-- Purple-themed buttons (#7c3aed)
-- Frosted glass UI cards with backdrop blur
-- Tall post height (more immersive experience)
+
+- Beautiful gradient background (from-purple-50 to-blue-50)
+- Purple-themed buttons (#7c3aed) with hover effects (#6d28d9)
+- Frosted glass UI cards with backdrop blur and transparency (bg-white/80)
+- Tall post height for more immersive experience
+- Purple badge in top-right corner displaying "Type B (typeB)"
+- Snoo mascot image at the top
 
 **Features:**
+
 - All Type A features PLUS:
-- "Community Data" card displaying:
+- Enhanced "Community Data" card with frosted glass effect:
   - Subreddit name and subscriber count
   - Your karma score
-  - **Top 3 hot posts** from the community (titles truncated to 40 characters)
-- Enhanced visual polish with shadows and transparency effects
-- Purple color scheme throughout
+  - **Top 3 hot posts** from the community (titles truncated to 40 characters with "...")
+  - Purple color scheme throughout (text-purple-900, text-purple-700, text-purple-600)
+- Enhanced visual polish with rounded corners, shadows, and transparency
+- Purple-themed greeting: "Welcome [username]! 🎮"
+- Descriptive text: "This is Type B Post - Advanced game mode"
 
-**Best For:** Users who want more context, community engagement, richer visual experience
+**Technical Details:**
+
+- Entry point: `typeB.html`
+- Splash screen: "Welcome to Type B!" with "Launch Type B" button
+- Post type identifier: `typeB` stored in Redis
+
+**Best For:** Users who want more context, community engagement, richer visual experience, and enhanced aesthetics
+
+#### Unified Entry Point
+
+Both modes are served from a single `index.html` file that uses React-based routing:
+
+1. The `AppRouter` component fetches the post type from `/api/init`
+2. Based on the `postType` response (`typeA` or `typeB`), it renders the appropriate App component
+3. This eliminates the need for separate HTML files while maintaining distinct experiences
+4. Fallback to Type A if the API call fails
 
 ## Getting Started (For Developers)
 
@@ -226,23 +274,36 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 ```
 src/
 ├── client/
+│   ├── index.html       # Unified entry point for all post types
+│   ├── main.tsx         # React initialization with AppRouter
+│   ├── index.css        # Global styles (Tailwind)
 │   ├── typeA/           # Classic mode game
-│   │   ├── index.html   # Entry point for Type A
-│   │   ├── main.tsx     # React initialization
+│   │   ├── index.html   # Type A specific entry (for Vite build)
+│   │   ├── main.tsx     # Type A React initialization
 │   │   └── App.tsx      # Type A game component
 │   ├── typeB/           # Advanced mode game
-│   │   ├── index.html   # Entry point for Type B
-│   │   ├── main.tsx     # React initialization
+│   │   ├── index.html   # Type B specific entry (for Vite build)
+│   │   ├── main.tsx     # Type B React initialization
 │   │   └── App.tsx      # Type B game component
 │   ├── shared/          # Shared client code
 │   │   ├── components/  # Reusable React components
+│   │   │   └── UserActionDialog.tsx  # User consent dialog
 │   │   └── utils/       # API utilities and helpers
-│   └── hooks/           # Custom React hooks (useCounter)
+│   │       └── api.ts   # fetchAPI helper with error handling
+│   ├── hooks/           # Custom React hooks
+│   │   └── useCounter.ts  # Counter state management hook
+│   ├── public/          # Static assets
+│   │   └── snoo.png     # Reddit mascot image
+│   ├── vite.config.ts   # Vite build configuration
+│   └── tsconfig.json    # TypeScript configuration
 ├── server/
 │   ├── index.ts         # Express server with API endpoints
-│   └── core/            # Business logic modules
-│       ├── post.ts      # Post creation logic
-│       └── data.ts      # Reddit data fetching
+│   ├── core/            # Business logic modules
+│   │   ├── post.ts      # Post creation logic (createPostA, createPostB)
+│   │   ├── data.ts      # Reddit data fetching (getDataFeed)
+│   │   └── userActions.ts  # User post/comment creation
+│   ├── vite.config.ts   # Server build configuration
+│   └── tsconfig.json    # TypeScript configuration
 └── shared/
     └── types/           # Shared TypeScript types
         └── api.ts       # API request/response types
@@ -251,39 +312,66 @@ src/
 ## Key Features
 
 ### Multi-Post Type System
-- **Two Distinct Post Types**: Type A (classic) and Type B (advanced) with separate HTML entry points
+
+- **Two Distinct Post Types**: Type A (classic) and Type B (advanced) with separate visual themes
+- **Unified Entry Point**: Single `index.html` with React-based routing (`AppRouter` component)
+- **Dynamic Post Type Detection**: Fetches post type from `/api/init` and renders appropriate component
 - **Independent React Applications**: Each type has its own `App.tsx` with unique styling and features
-- **Vite Multi-Entry Build**: Generates `typeA.html` and `typeB.html` in `dist/client`
+- **Vite Multi-Entry Build**: Generates `typeA.html` and `typeB.html` in `dist/client` for separate builds
 - **Shared Components**: Reusable components in `src/client/shared/` (UserActionDialog, API utilities)
 - **Custom Hooks**: `useCounter` hook manages counter state and API calls for both types
+- **Fallback Handling**: Defaults to Type A if API call fails
 
 ### Centralized API Layer (Express Server)
+
 - **`GET /api/init`**: Initialize game state, fetch user data, and determine post type
-  - Returns: `{ type, postId, postType, count, username }`
+  - Returns: `{ type: 'init', postId: string, postType: 'typeA' | 'typeB', count: number, username: string }`
+  - Fetches counter value from Redis key `count`
+  - Fetches post type from Redis key `post:{postId}:type`
+  - Gets current Reddit username via `reddit.getCurrentUsername()`
 - **`POST /api/increment`**: Increment counter value by 1
-  - Returns: `{ type, postId, count }`
+  - Returns: `{ type: 'increment', postId: string, count: number }`
+  - Uses Redis `incrBy('count', 1)` for atomic increment
 - **`POST /api/decrement`**: Decrement counter value by 1
-  - Returns: `{ type, postId, count }`
+  - Returns: `{ type: 'decrement', postId: string, count: number }`
+  - Uses Redis `incrBy('count', -1)` for atomic decrement
 - **`GET /api/data-feed`**: Fetch Reddit community data (subreddit info, hot posts, user karma)
-  - Returns: `{ posts[], subredditInfo, userData? }`
+  - Returns: `{ posts: PostSummary[], subredditInfo: SubredditInfo, userData?: UserData }`
+  - Fetches hot posts, subreddit info, and user data in parallel using `Promise.all`
 - **`POST /api/create-user-post`**: Create posts on user's behalf (requires consent)
-  - Body: `{ action, data: { title, content, subredditName }, consent }`
+  - Body: `{ action: 'create-post', data: { title, content, subredditName }, consent: boolean }`
+  - Uses `runAs: 'USER'` for user-generated content
 - **`POST /api/create-user-comment`**: Create comments on user's behalf (requires consent)
-  - Body: `{ action, data: { postId, text }, consent }`
+  - Body: `{ action: 'create-comment', data: { postId, text }, consent: boolean }`
+  - Uses `runAs: 'USER'` for user-generated content
+
+### Internal Endpoints (Mod Tools)
+
+- **`POST /internal/on-app-install`**: Automatically creates initial Type A post on app installation
+- **`POST /internal/menu/create-post-a`**: Creates Type A post from mod menu, returns navigation URL
+- **`POST /internal/menu/create-post-b`**: Creates Type B post from mod menu, returns navigation URL
 
 ### Reddit Integration
-- **Real-Time Subreddit Statistics**: Subscriber count, subreddit name, description
-- **User Profile Data**: Current username, karma score, account creation date
-- **Hot Posts Feed**: Top 3 trending posts from the community (Type B only)
-- **User Action Capabilities**: Infrastructure for creating posts/comments with consent flows
-- **Automatic Authentication**: Devvit middleware handles Reddit authentication
+
+- **Real-Time Subreddit Statistics**: Subscriber count, subreddit name, description via `reddit.getSubredditInfoByName()`
+- **User Profile Data**: Current username via `reddit.getCurrentUsername()`, karma score, account creation date
+- **Hot Posts Feed**: Top 10 hot posts from the community via `reddit.getHotPosts()` (Type B displays top 3)
+- **User Action Capabilities**: Infrastructure for creating posts/comments with consent flows via UserActionDialog
+- **Automatic Authentication**: Devvit middleware handles Reddit authentication automatically
+- **Context-Aware**: Server has access to `context.postId` and `context.subredditName` for all requests
 
 ### State Management
-- **Redis-Backed Storage**: Counter values stored per-post with key `count`
-- **Post Type Tracking**: Post types stored in Redis with key `post:{postId}:type`
+
+- **Redis-Backed Storage**: Counter values stored per-post with key `count` (scoped to post context)
+- **Post Type Tracking**: Post types stored in Redis with key `post:{postId}:type` (values: 'typeA' or 'typeB')
 - **React Hooks**: `useCounter` hook manages local state and API synchronization
-- **Automatic Persistence**: All counter changes immediately saved to Redis
-- **Loading States**: UI reflects loading status during API calls
+  - Fetches initial data on mount via `/api/init`
+  - Provides `increment` and `decrement` callbacks
+  - Manages loading states during API calls
+  - Disables buttons during loading to prevent race conditions
+- **Automatic Persistence**: All counter changes immediately saved to Redis via atomic operations
+- **Loading States**: UI reflects loading status during API calls (shows "..." in counter, disables buttons)
+- **Error Handling**: Graceful fallbacks if API calls fail, with console error logging
 
 ## Cursor Integration
 
@@ -292,6 +380,7 @@ This template comes with a pre-configured cursor environment. To get started, [d
 ## Contributing
 
 This project demonstrates advanced Devvit patterns including:
+
 - Multiple post type architecture
 - Centralized data access with Reddit API
 - User action capabilities

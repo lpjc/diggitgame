@@ -5,6 +5,15 @@ import { createRoot } from 'react-dom/client';
 import { App as TypeAApp } from './typeA/App';
 import { App as TypeBApp } from './typeB/App';
 
+const LoadingScreen = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-lg font-medium text-gray-700">Loading game...</p>
+    </div>
+  </div>
+);
+
 const AppRouter = () => {
   const [postType, setPostType] = useState<'typeA' | 'typeB' | null>(null);
 
@@ -23,7 +32,7 @@ const AppRouter = () => {
   }, []);
 
   if (!postType) {
-    return <div>Loading...</div>;
+    return <LoadingScreen />;
   }
 
   return postType === 'typeB' ? <TypeBApp /> : <TypeAApp />;

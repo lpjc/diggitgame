@@ -77,9 +77,7 @@ export const App = () => {
             r/{dataFeed.subredditInfo.name} - {dataFeed.subredditInfo.subscribers} subscribers
           </p>
           {dataFeed.userData && (
-            <p className="text-sm text-gray-600 mt-1">
-              Your karma: {dataFeed.userData.karma}
-            </p>
+            <p className="text-sm text-gray-600 mt-1">Your karma: {dataFeed.userData.karma}</p>
           )}
         </div>
       )}
