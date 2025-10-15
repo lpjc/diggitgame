@@ -5,7 +5,8 @@
     "dir": "dist/client",
     "entrypoints": {
       "default": {
-        "entry": "index.html"
+        "entry": "index.html",
+        "height": "tall"
       }
     }
   },
@@ -16,18 +17,34 @@
   "media": {
     "dir": "assets"
   },
+  "permissions": {
+    "reddit": {
+      "enable": true,
+      "asUser": ["SUBMIT_POST", "SUBMIT_COMMENT"]
+    }
+  },
   "menu": {
     "items": [
       {
-        "label": "Create a new post",
-        "description": "diggitgame",
+        "label": "Create PostA",
+        "description": "Create a Type A game post",
         "location": "subreddit",
         "forUserType": "moderator",
-        "endpoint": "/internal/menu/post-create"
+        "endpoint": "/internal/menu/create-post-a"
+      },
+      {
+        "label": "Create PostB",
+        "description": "Create a Type B game post",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/create-post-b"
       }
     ]
   },
   "triggers": {
     "onAppInstall": "/internal/on-app-install"
+  },
+  "dev": {
+    "subreddit": "diggitgame_dev"
   }
 }

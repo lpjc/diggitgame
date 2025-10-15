@@ -1,27 +1,74 @@
-import { context, reddit } from '@devvit/web/server';
+import { context, reddit, redis } from '@devvit/web/server';
 
-export const createPost = async () => {
+export const createPostA = async () => {
   const { subredditName } = context;
   if (!subredditName) {
     throw new Error('subredditName is required');
   }
 
-  return await reddit.submitCustomPost({
+  console.log('Creating PostA with entrypoint: typeA');
+  const post = (await reddit.submitCustomPost({
+    entrypoint: 'typeA',
     splash: {
-      // Splash Screen Configuration
-      appDisplayName: 'diggitgame',
+      appDisplayName: 'Game Type A',
+      heading: 'Welcome to Type A!',
+      description: 'Experience the classic game mode',
+      buttonLabel: 'Launch Type A',
       backgroundUri: 'default-splash.png',
-      buttonLabel: 'Tap to Start',
-      description: 'An exciting interactive experience',
-      entryUri: 'index.html',
-      heading: 'Welcome to the Game!',
       appIconUri: 'default-icon.png',
     },
     postData: {
-      gameState: 'initial',
-      score: 0,
+      postType: 'typeA',
+      initialState: {
+        gameState: 'initial',
+        score: 0,
+      },
     },
     subredditName: subredditName,
-    title: 'diggitgame',
-  });
+    title: 'Type A Game Post',
+  } as any)) as any;
+  console.log('PostA created:', post.id);
+
+  // Store post type in Redis for later retrieval
+  await redis.set(`post:${post.id}:type`, 'typeA');
+
+  return post;
 };
+
+export const createPostB = async () => {
+  const { subredditName } = context;
+  if (!subredditName) {
+    throw new Error('subredditName is required');
+  }
+
+  console.log('Creating PostB with entrypoint: typeB');
+  const post = (await reddit.submitCustomPost({
+    entrypoint: 'typeB',
+    splash: {
+      appDisplayName: 'Game Type B',
+      heading: 'Welcome to Type B!',
+      description: 'Experience the advanced game mode',
+      buttonLabel: 'Launch Type B',
+      backgroundUri: 'default-splash.png',
+      appIconUri: 'default-icon.png',
+    },
+    postData: {
+      postType: 'typeB',
+      initialState: {
+        gameState: 'initial',
+        score: 0,
+      },
+    },
+    subredditName: subredditName,
+    title: 'Type B Game Post',
+  } as any)) as any;
+  console.log('PostB created:', post.id);
+
+  // Store post type in Redis for later retrieval
+  await redis.set(`post:${post.id}:type`, 'typeB');
+
+  return post;
+};
+
+// Legacy function for backward compatibility
+export const createPost = createPostA;
