@@ -1,109 +1,147 @@
-import { navigateTo } from '@devvit/web/client';
-import { useCounter } from '../hooks/useCounter';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { fetchAPI } from '../shared/utils/api';
-import { InitResponse, DataFeedResponse } from '../../shared/types/api';
+import { DigSiteData } from '../../shared/types/game';
+import { GameEngine } from './game/GameEngine';
+import { ToolManager } from './game/tools/ToolManager';
+import { DetectorTool } from './game/tools/DetectorTool';
+import { ShovelTool } from './game/tools/ShovelTool';
+import { BrushTool } from './game/tools/BrushTool';
+import { ArtifactSystem } from './game/ArtifactSystem';
+import { ToolDock } from './components/ToolDock';
+import { DiscoveryModal } from './components/DiscoveryModal';
 
 export const App = () => {
-  console.log('🔵 TYPE A APP LOADED');
-  const { count, username, loading, increment, decrement } = useCounter();
-  const [postType, setPostType] = useState<string>('');
-  const [dataFeed, setDataFeed] = useState<DataFeedResponse | null>(null);
-  const [feedLoading, setFeedLoading] = useState(true);
+  console.log('🔵 TYPE A - EXCAVATION GAME LOADED');
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [digSiteData, setDigSiteData] = useState<DigSiteData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTool, setActiveTool] = useState<'detector' | 'shovel' | 'brush' | null>(null);
+  const [showDiscovery, setShowDiscovery] = useState(false);
+  const [artifactAdded, setArtifactAdded] = useState(false);
+  
+  const gameEngineRef = useRef<GameEngine | null>(null);
+  const toolManagerRef = useRef<ToolManager | null>(null);
+  const artifactSystemRef = useRef<ArtifactSystem | null>(null);
 
   useEffect(() => {
-    const fetchInitData = async () => {
+    const loadDigSite = async () => {
       try {
-        const initData = await fetchAPI<InitResponse>('/api/init');
-        setPostType(initData.postType);
+        // Get postId from init endpoint (which has context)
+        const initData = await fetchAPI<{ postId: string }>('/api/init');
+        const data = await fetchAPI<DigSiteData>(`/api/digsite/${initData.postId}`);
+        setDigSiteData(data);
       } catch (error) {
-        console.error('Failed to fetch init data:', error);
-      }
-    };
-
-    const fetchDataFeed = async () => {
-      try {
-        const feed = await fetchAPI<DataFeedResponse>('/api/data-feed');
-        setDataFeed(feed);
-      } catch (error) {
-        console.error('Failed to fetch data feed:', error);
+        console.error('Failed to load dig site:', error);
       } finally {
-        setFeedLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchInitData();
-    fetchDataFeed();
+    loadDigSite();
   }, []);
 
-  return (
-    <div className="flex relative flex-col justify-center items-center min-h-screen gap-4 p-4">
-      <div className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-        Type A {postType && `(${postType})`}
-      </div>
-      <img className="object-contain w-1/2 max-w-[250px] mx-auto" src="/snoo.png" alt="Snoo" />
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold text-center text-gray-900 ">
-          {username ? `Hey ${username} 👋` : ''}
-        </h1>
-        <p className="text-base text-center text-gray-600 ">
-          This is Type A Post - Classic game mode
-        </p>
-      </div>
-      <div className="flex items-center justify-center mt-5">
-        <button
-          className="flex items-center justify-center bg-[#d93900] text-white w-14 h-14 text-[2.5em] rounded-full cursor-pointer font-mono leading-none transition-colors hover:bg-[#c03300]"
-          onClick={decrement}
-          disabled={loading}
-        >
-          -
-        </button>
-        <span className="text-[1.8em] font-medium mx-5 min-w-[50px] text-center leading-none text-gray-900">
-          {loading ? '...' : count}
-        </span>
-        <button
-          className="flex items-center justify-center bg-[#d93900] text-white w-14 h-14 text-[2.5em] rounded-full cursor-pointer font-mono leading-none transition-colors hover:bg-[#c03300]"
-          onClick={increment}
-          disabled={loading}
-        >
-          +
-        </button>
-      </div>
+  const startGame = () => {
+    if (!canvasRef.current || !digSiteData) return;
 
-      {!feedLoading && dataFeed && (
-        <div className="mt-6 w-full max-w-md bg-white rounded-lg shadow p-4">
-          <h2 className="text-lg font-semibold mb-2">Subreddit Info</h2>
-          <p className="text-sm text-gray-600">
-            r/{dataFeed.subredditInfo.name} - {dataFeed.subredditInfo.subscribers} subscribers
-          </p>
-          {dataFeed.userData && (
-            <p className="text-sm text-gray-600 mt-1">Your karma: {dataFeed.userData.karma}</p>
-          )}
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d')!;
+    const engine = new GameEngine(canvas);
+    const artifactSystem = new ArtifactSystem(digSiteData.artifact);
+
+    // Initialize tool manager
+    const toolManager = new ToolManager({
+      dirtLayer: engine.getState().dirtLayer,
+      artifact: digSiteData.artifact,
+      canvas,
+      ctx,
+      onArtifactDamage: () => {
+        artifactSystem.markDamaged();
+        console.log('⚠️ Artifact damaged!');
+      },
+      onArtifactBreak: () => {
+        artifactSystem.markBroken();
+        setShowDiscovery(true);
+        console.log('💔 Artifact broken!');
+      },
+    });
+
+    toolManager.registerTool(new DetectorTool());
+    toolManager.registerTool(new ShovelTool());
+    toolManager.registerTool(new BrushTool());
+
+    gameEngineRef.current = engine;
+    toolManagerRef.current = toolManager;
+    artifactSystemRef.current = artifactSystem;
+
+    engine.setPhase('playing');
+    engine.start();
+
+    setGameStarted(true);
+  };
+
+  const handleToolSelect = (tool: 'detector' | 'shovel' | 'brush') => {
+    setActiveTool(tool);
+    toolManagerRef.current?.setActiveTool(tool);
+  };
+
+  const handleAddToMuseum = async () => {
+    if (!digSiteData || !artifactSystemRef.current) return;
+
+    try {
+      await fetchAPI('/api/museum/add-artifact', {
+        method: 'POST',
+        body: JSON.stringify({
+          artifactData: digSiteData.artifact,
+          sourceDigSite: digSiteData.postId,
+          isBroken: artifactSystemRef.current.isBrokenState(),
+        }),
+      });
+      setArtifactAdded(true);
+    } catch (error) {
+      console.error('Failed to add artifact to museum:', error);
+    }
+  };
+
+  // Auto-start game when data loads
+  useEffect(() => {
+    if (digSiteData && !gameStarted && canvasRef.current) {
+      startGame();
+    }
+  }, [digSiteData, gameStarted]);
+
+  if (loading || !digSiteData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-amber-100 to-orange-100">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⛏️</div>
+          <p className="text-xl font-semibold text-gray-700">Loading dig site...</p>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 text-[0.8em] text-gray-600">
-        <button
-          className="cursor-pointer"
-          onClick={() => navigateTo('https://developers.reddit.com/docs')}
-        >
-          Docs
-        </button>
-        <span className="text-gray-300">|</span>
-        <button
-          className="cursor-pointer"
-          onClick={() => navigateTo('https://www.reddit.com/r/Devvit')}
-        >
-          r/Devvit
-        </button>
-        <span className="text-gray-300">|</span>
-        <button
-          className="cursor-pointer"
-          onClick={() => navigateTo('https://discord.com/invite/R7yu2wh9Qz')}
-        >
-          Discord
-        </button>
-      </footer>
+  return (
+    <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        style={{ touchAction: 'none' }}
+      />
+
+      {gameStarted && <ToolDock activeTool={activeTool} onToolSelect={handleToolSelect} />}
+
+      {showDiscovery && digSiteData && (
+        <DiscoveryModal
+          artifact={digSiteData.artifact}
+          isBroken={artifactSystemRef.current?.isBrokenState() || false}
+          onAddToMuseum={handleAddToMuseum}
+          onFindMore={() => window.location.reload()}
+          onViewMuseum={() => console.log('Navigate to museum')}
+          isAdded={artifactAdded}
+        />
+      )}
     </div>
   );
 };

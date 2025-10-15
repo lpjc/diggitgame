@@ -1,58 +1,61 @@
 ## Diggit Game
 
-A dual-mode interactive counter game built on Reddit's Devvit platform, featuring two distinct gameplay experiences with real-time Reddit integration and community data visualization.
+**Subreddit Excavator** - An interactive archaeology game built on Reddit's Devvit platform where players uncover forgotten Reddit artifacts (historical posts) buried in dig sites representing different subreddits. Using tactile excavation tools, players carefully dig through layered dirt to discover posts from Reddit's history, with each discovery adding to their personal museum collection.
 
 ### What is Diggit Game?
 
-Diggit Game is a multi-post-type Devvit application that showcases the power of Reddit's developer platform through two unique game modes. At its core, it's an interactive counter where players can increment and decrement a shared value, but it goes beyond simple counting by integrating live Reddit community data and user information.
+Diggit Game is a mobile-first archaeology experience that transforms Reddit's history into an engaging excavation game. The game features two distinct post types that work together to create a complete gameplay loop:
 
-The game uses intelligent routing to automatically detect which post type you're viewing and render the appropriate experience - all from a single unified codebase. When you click the splash screen on any Diggit Game post, the app displays a polished loading screen with an animated spinner while it fetches your post type from the server, then instantly loads the correct game mode.
+**Dig Site Posts (Type A)**: Active gameplay where you excavate historical Reddit posts
+- Each dig site represents a specific subreddit (e.g., r/aww, r/denmark)
+- Canvas-based 2D top-down view of a dig area with layered dirt (100x100 grid, depth 0-60)
+- Three excavation tools: Detector (locate artifacts), Shovel (fast digging with risk), and Brush (safe, careful removal)
+- Randomized biomes (grass, rock, sand, swamp) themed to match the target subreddit's colors
+- Community stats showing total artifacts found and broken by all players at this dig site
+- 5% chance to discover subreddit relics that unlock new dig sites
+- Immediate gameplay - no splash screen, game starts automatically when you open the post
 
-**Type A (Classic Mode)**: A clean, minimalist counter experience featuring:
+**Museum Posts (Type B)**: Your personal collection and progression hub
+- Displays all artifacts you've discovered across all dig sites
+- Shows your personal stats: total artifacts found, broken, and subreddits unlocked
+- Grid layout of collected posts with thumbnails and discovery dates
+- Broken artifacts appear as cracked silhouettes
+- Subreddit relics displayed as glowing icons on pedestals
+- Tap relics to create new dig sites for those subreddits
 
-- Reddit orange-themed circular buttons with smooth hover effects
-- Clean white background for distraction-free gameplay
-- Your Reddit username displayed prominently with a friendly greeting
-- Real-time subreddit information card showing community name, subscriber count, and your personal karma
-- Regular post height for standard feed integration
-- Simple, intuitive interface perfect for quick interactions
-
-**Type B (Advanced Mode)**: An enhanced visual experience with:
-
-- Beautiful purple-to-blue gradient background creating an immersive atmosphere
-- Purple-themed circular buttons matching the gradient aesthetic
-- All Type A features plus hot post previews from the community
-- Top 3 trending posts displayed in an elegant frosted glass card with backdrop blur effects
-- Enhanced visual polish with shadows and transparency
-- Tall post height for more immersive gameplay
-- Perfect for users who want more context about the community
-
-Both modes share the same counter state per post (stored in Redis), meaning the count persists across sessions and is shared by all players viewing that specific post. The counter updates in real-time as you click, with loading states preventing double-clicks.
+The game uses intelligent routing to automatically detect which post type you're viewing. When you open any Diggit Game post, a polished loading screen with an animated blue spinner appears while the app fetches the post type from the server, then seamlessly loads either the dig site excavation game (which starts immediately) or your personal museum.
 
 ### What Makes This Game Innovative?
 
-1. **Intelligent Multi-Post Architecture**: Demonstrates advanced Devvit capabilities with a unified entry point that dynamically routes to different game modes based on post type, eliminating code duplication while maintaining distinct experiences
+1. **Reddit History as Gameplay**: Transforms Reddit's vast archive into discoverable artifacts, giving new life to forgotten posts (6+ months old with engagement). Every artifact is real Reddit content with actual titles, authors, thumbnails, and post dates.
 
-2. **Polished Loading Experience**: Features a custom loading screen with animated spinner and gradient background that provides visual feedback while the game initializes, creating a professional first impression
+2. **Immediate Gameplay**: No splash screens or menus - the game starts automatically when you open a dig site post. You're instantly dropped into the excavation scene with tools ready to use.
 
-3. **Centralized Data Layer**: Unified Express server with RESTful API endpoints (`/api/init`, `/api/increment`, `/api/decrement`, `/api/data-feed`) that provide both game modes with consistent access to Reddit data
+3. **Tactile Tool System**: Three distinct excavation tools with realistic mechanics:
+   - **Detector (📡)**: Tap and hold to scan for artifacts. Get proximity feedback with color-coded expanding circles (red=far, orange=closer, yellow=near, green=very close) and pitch-varying beep sounds that guide you to the buried treasure
+   - **Shovel (⛏️)**: Fast digging (removes 10 depth units in 15px radius) with 500ms cooldown. Hitting artifacts shows a red crack warning (X pattern), and hitting the same spot twice breaks them permanently
+   - **Brush (🖌️)**: Slow, safe removal (1 depth unit/second in 8px radius) that can't damage artifacts. Creates dust particle effects that float upward and provides light haptic feedback (10ms vibration)
 
-4. **User Action Capabilities**: Built-in infrastructure for players to create posts and comments on their own behalf with proper consent flows (via UserActionDialog component), enabling future social features
+4. **Dynamic Subreddit Theming**: Each dig site automatically adapts to its target subreddit's visual identity (primary colors, icons, biome type), making every excavation feel unique and connected to that community
 
-5. **Live Reddit Integration**: Real-time display of subreddit statistics, user karma, and hot posts fetched directly from Reddit's API through the server layer - no external API calls needed
+5. **Risk-Reward Mechanics**: Players must balance speed (shovel) vs safety (brush), with the detector helping locate artifacts. Breaking artifacts increments your "broken" counter and adds broken pieces to your museum, adding consequence to careless digging
 
-6. **Mobile-First Design**: Responsive layouts with touch-optimized circular buttons, designed for Reddit's mobile-first user base with proper viewport settings preventing zoom
+6. **Canvas-Based Rendering**: Real-time 2D dirt layer system with depth-based color darkening (darker = deeper), where each cell has a depth value (0-60). Includes random pebbles for visual variety and biome-specific border decorations
 
-7. **Persistent State Management**: Counter values stored per-post in Redis, maintaining game state across sessions and users - your progress is never lost
+7. **Progressive Artifact Uncovering**: Artifacts become visible when you dig within 8 layers of their depth, fading from dark silhouette (0% uncovered) to full clarity (100% uncovered), with a golden glow effect and shadow blur at 70%+ discovery
 
-8. **Type-Safe Architecture**: End-to-end TypeScript with shared types between client and server, ensuring API contract consistency and catching errors at compile time
+8. **Community-Driven Exploration**: Discovering subreddit relics (5% chance) unlocks new dig sites, encouraging players to explore diverse Reddit communities organically. Claiming a relic automatically posts a comment announcing your discovery
 
-9. **Seamless User Experience**: Single HTML entry point with React-based routing eliminates loading delays between post types, providing instant gameplay after initial load
+9. **Dual Post Architecture**: Dig sites (Type A) for gameplay and museums (Type B) for collection create a natural progression loop - play → discover → collect → unlock → play new sites
+
+10. **Mobile-First Touch Controls**: Optimized for 1-2 minute play sessions on mobile with thumb-friendly tool buttons in a floating dock at the bottom (black background with 70% opacity, rounded full design), responsive touch handling, and haptic feedback (vibration on supported devices)
+
+11. **Persistent Progression**: All discoveries saved to your personal museum via Redis, community stats tracked per dig site, and unlocked subreddits persist across sessions. Artifacts are cached per session (1-hour TTL) to prevent them from changing mid-excavation
 
 ### Technology Stack
 
 - [Devvit](https://developers.reddit.com/): Reddit's developer platform for building immersive apps
-- [Vite](https://vite.dev/): Multi-entry build system for separate game modes
+- [Vite](https://vite.dev/): Build system for client and server bundles
 - [React](https://react.dev/): UI framework with hooks for state management
 - [Express](https://expressjs.com/): Backend API server with Reddit integration
 - [Tailwind](https://tailwindcss.com/): Utility-first CSS for responsive styling
@@ -64,84 +67,123 @@ Both modes share the same counter state per post (stored in Redis), meaning the 
 
 #### Getting Started
 
-1. **Find a Game Post**: Look for Diggit Game posts in your Reddit feed - they'll appear as either "Type A Game Post" or "Type B Game Post"
-2. **Launch the Game**: Click the splash screen button (e.g., "Launch Type A" or "Launch Type B") to open the full-screen webview
-3. **Loading Screen**: You'll see a polished loading screen with an animated blue spinner and "Loading game..." text while the app initializes
-4. **Automatic Detection**: The game automatically detects which post type you're viewing and loads the appropriate experience
-5. **Wait for Initialization**: The app fetches your Reddit username, current counter value, and community data (usually takes 1-2 seconds)
+1. **Find a Dig Site Post**: Look for Diggit Game posts in your Reddit feed - they'll show the target subreddit (e.g., "🏜️ Dig Site: r/aww") with community stats in the post title or description
+2. **Open the Post**: Click on the post to open it in Reddit
+3. **Loading Screen**: You'll see a polished loading screen with an animated blue spinner and "Loading game..." text while the dig site initializes
+4. **Instant Gameplay**: The game starts automatically! No splash screen or "Enter" button - you're immediately dropped into the excavation scene with your tools ready
 
-#### Playing the Game
+#### Excavation Gameplay (Dig Site Posts)
 
-**Basic Counter Mechanics:**
+**Understanding the Dig Scene:**
 
-1. **Increment the Counter**:
-   - Tap or click the `+` button (large circular button on the right side)
-   - The counter increases by 1
-   - The new value is immediately saved to Redis and persists across sessions
-   - Button is disabled during the API call to prevent double-clicks
-2. **Decrement the Counter**:
+The game displays a top-down 2D view of a 100x100 cell dig area rendered on an HTML5 canvas:
+- **Layered Dirt**: Each cell has a depth value from 0 (fully excavated) to 60 (untouched)
+- **Biome Border**: Decorative border around the dig area themed to the target subreddit (grass/rock/sand/swamp) with subreddit-specific colors
+- **Hidden Artifact**: A historical Reddit post (or rare subreddit relic) buried at random position and depth (40-60 units)
+- **Visual Depth**: Deeper dirt appears darker with cooler hues to simulate depth (up to 40% darker at max depth)
+- **Pebbles & Particles**: Random decorative elements add visual variety to the dig scene
 
-   - Tap or click the `-` button (large circular button on the left side)
-   - The counter decreases by 1
-   - The new value is immediately saved to Redis
-   - Button is disabled during the API call to prevent double-clicks
+**Using the Three Tools:**
 
-3. **Watch the Counter**:
-   - The current count is displayed prominently in the center between the two buttons
-   - When loading, the counter shows "..." to indicate an API call is in progress
-   - The counter updates instantly when the server responds
+The tool dock appears at the bottom center of the screen in a floating black bar (70% opacity, rounded full design) with three circular buttons. The active tool is highlighted with an orange background, scale effect (110%), and orange shadow glow.
 
-**Viewing Your Profile and Community Data:**
+1. **Detector Tool (📡 Locate Artifacts)**:
+   - **How to Use**: Tap the detector button to select it, then tap and hold anywhere on the dig area to scan
+   - **Proximity Feedback**: The detector pings every ~1 second with expanding circle animations and beep sounds:
+     - 🔴 **Red/Low Pitch (200Hz)**: Very far from artifact (50+ cells away)
+     - 🟠 **Orange/Medium Pitch (400Hz)**: Far from artifact (30-50 cells)
+     - 🟡 **Yellow/Higher Pitch (600Hz)**: Close to artifact (15-30 cells)
+     - 🟢 **Green/High Pitch (800Hz)**: Very close to artifact (5-15 cells)
+   - **Visual Effect**: Three expanding circles appear at your cursor/finger position with the proximity color
+   - **Strategy**: Scan the area systematically to triangulate the artifact's location before digging
 
-4. **See Your Reddit Identity**:
+2. **Shovel Tool (⛏️ Fast Digging)**:
+   - **How to Use**: Tap the shovel button to select it, then tap anywhere on the dig area to remove dirt
+   - **Dig Power**: Removes 10 depth units in a 15-pixel radius
+   - **Cooldown**: 500ms between digs (prevents spam clicking)
+   - **Visual Effect**: Brown circular patch appears where you dig
+   - **Risk**: If you hit an artifact, you'll see red crack lines (X pattern) as a warning
+   - **Breaking Artifacts**: Hitting the same artifact location twice **breaks it permanently** and triggers the discovery modal showing it as broken (💔 emoji)
+   - **Strategy**: Use for quick excavation in safe areas, but switch to brush near artifacts
 
-   - Your Reddit username appears at the top of the screen once loaded
-   - **Type A**: Displays "Hey [username] 👋" in a friendly greeting
-   - **Type B**: Displays "Welcome [username]! 🎮" with a gaming theme
+3. **Brush Tool (🖌️ Safe Excavation)**:
+   - **How to Use**: Tap the brush button to select it, then tap and hold while swiping across the dig area
+   - **Gentle Removal**: Removes 1 depth unit per second in an 8-pixel radius
+   - **No Cooldown**: Continuous use while holding
+   - **Safe**: Cannot damage or break artifacts - perfect for careful uncovering
+   - **Visual Feedback**: 
+     - Dust particle effects (small beige dots with 30% spawn chance) float upward from the brush area
+     - Semi-transparent brushing trail (rgba(200, 180, 150, 0.3)) follows your movement
+   - **Haptic Feedback**: Light vibration (10ms) on mobile devices if supported
+   - **Strategy**: Use near artifacts to safely expose them without risk
 
-5. **Explore Community Information**:
+**Discovering Artifacts:**
 
-   - **Type A**: A clean white card shows:
-     - Subreddit name (e.g., "r/diggitgame_dev")
-     - Total subscriber count
-     - Your personal karma score
-   - **Type B**: An enhanced frosted glass card shows:
-     - Subreddit name and subscriber count
-     - Your personal karma score
-     - **Top 3 hot posts** from the community with truncated titles (first 40 characters)
-     - Beautiful purple gradient theme with backdrop blur effects
+4. **Artifact Uncovering**:
+   - Artifacts become visible when you dig within 8 layers of their depth
+   - They fade from dark silhouette (0% uncovered) to full clarity (100% uncovered)
+   - At 70%+ uncovered, the artifact glows with a golden outline (rgba(255, 215, 0)) and shadow blur effect (15px)
+   - Discovery modal triggers automatically when approximately 70% of the artifact's surface is exposed
+   - Artifacts show an icon: 📜 for posts, 🏛️ for subreddit relics
 
-6. **Navigate to Reddit Resources**:
-   - Footer links are available at the bottom of the screen:
-     - **Docs**: Opens Devvit documentation in a new tab
-     - **r/Devvit**: Opens the Devvit subreddit community
-     - **Discord**: Opens the Devvit Discord server invite
+5. **Discovery Modal**:
+   - **For Post Artifacts (95% chance)**:
+     - Animated modal with gradient background (amber-50 to orange-50) and scale-in animation
+     - 🎉 emoji and "Discovery!" heading for intact artifacts
+     - 💔 emoji and "Artifact Broken!" heading if broken with shovel
+     - Shows post title, thumbnail (if available), subreddit, author, and date
+     - Displays text snippet if available (up to 200 characters, line-clamp-3)
+     - "Add to Museum" button (orange-500) saves it to your personal collection via API call
+     - After adding: "Find More Digs" (blue-500, reloads page) and "View Your Museum" (purple-500) buttons appear
+   - **For Subreddit Relics (5% chance)**:
+     - Animated modal with gradient background (purple-50 to pink-50)
+     - Pulsing 🏛️ emoji and "Subreddit Relic Discovered!" heading
+     - Shows subreddit icon (if available), name, and description
+     - "Claim Relic" button (purple-500) unlocks that subreddit for future dig sites
+     - Automatically posts a comment on the dig site announcing your discovery
+     - After claiming: "Explore New Site" (blue-500) and "View Your Museum" (purple-500) buttons appear
 
-**Visual Differences Between Modes:**
+6. **Community Stats**:
+   - Each dig site tracks total artifacts found and broken by all players
+   - Your actions update these community counters via `/api/stats/update` endpoint
+   - Stats are stored in Redis and persist across all players
 
-- **Type A (Classic)**:
+#### Museum Gameplay (Museum Posts)
 
-  - White background for clean, distraction-free gameplay
-  - Reddit orange buttons (#d93900) with hover effects
-  - Simple card design with subtle shadows
-  - Regular post height fits naturally in your feed
-  - Blue badge in top-right corner shows "Type A"
+**Viewing Your Collection:**
 
-- **Type B (Advanced)**:
-  - Purple-to-blue gradient background (from-purple-50 to-blue-50)
-  - Purple buttons (#7c3aed) matching the theme
-  - Frosted glass card with backdrop blur and transparency
-  - Tall post height for more immersive experience
-  - Purple badge in top-right corner shows "Type B"
+1. **Personal Museum**: Each player can create one museum post showing their complete collection
+2. **Stats Summary**: Displays your total artifacts found, broken, and subreddits unlocked at the top
+3. **Artifact Grid**: 
+   - Collected posts shown with thumbnails, subreddit, and discovery date in a responsive grid layout
+   - Tap any artifact to view the original Reddit post details
+   - Broken artifacts appear as cracked silhouettes or dust piles
+4. **Relic Pedestals**:
+   - Unlocked subreddits displayed as glowing icons on pedestals
+   - Tap a relic to create a new dig site post for that subreddit
+5. **Progression Tracking**: See your complete excavation history and unlocked communities
+
+**Current Implementation Status**: The Museum UI (Type B) is designed but not yet fully implemented. The backend API endpoints (`/api/museum/:userId`, `/api/museum/create`, `/api/museum/add-artifact`) are ready and functional.
+
+#### Pro Tips
+
+- **Start with the Detector**: Always scan the area first to locate the artifact before digging - this saves time and prevents accidental breaks
+- **Shovel for Speed**: Use the shovel to quickly remove dirt far from the artifact (when detector shows red/orange)
+- **Switch to Brush Near Artifacts**: Once you're close (green detector readings), switch to the brush for safe excavation
+- **Watch the Uncovering**: The artifact silhouette appears when you're within 8 layers - dig carefully around it to maximize uncovered percentage
+- **Avoid Double-Hitting**: If you see red crack lines, you've hit the artifact once - don't hit that spot again or it will break!
+- **Collect Relics**: The 5% relic chance unlocks new subreddits to explore - these are rare and valuable
+- **Build Your Museum**: Every discovery adds to your permanent collection stored in Redis
 
 #### Important Notes
 
-- **Shared Counter**: The counter value is shared across ALL players viewing the same post - it's a community counter, not personal
-- **Persistent State**: Your progress is automatically saved to Redis - you can close the app and return anytime without losing the count
-- **Per-Post State**: Each game post has its own independent counter (Type A Post #1 and Type B Post #1 have completely separate counters)
-- **Loading States**: Buttons are disabled while API calls are in progress to prevent race conditions - you'll see "..." in the counter display
-- **Mobile Optimized**: The game works perfectly on mobile devices with touch-friendly circular buttons and proper viewport settings
-- **Real-Time Data**: Community stats and hot posts are fetched fresh each time you open the game
+- **Mobile Optimized**: Designed for 1-2 minute play sessions on mobile with thumb-friendly tool buttons in a floating dock
+- **Persistent Progress**: All discoveries saved to your museum via Redis, accessible anytime
+- **Per-Session Artifacts**: Each dig site has a unique artifact cached for 1 hour - it won't change mid-excavation but will be different on your next visit
+- **Community Experience**: Dig site stats show collective player progress across all players
+- **Real Reddit Content**: Every artifact is a real historical post from Reddit's archives (6+ months old with 10+ score)
+- **Touch Controls**: Optimized for touch input with pointer events (pointerdown, pointermove, pointerup)
+- **Canvas Rendering**: Uses HTML5 Canvas with 2D context for smooth real-time rendering at 60fps
 
 ### For Moderators
 

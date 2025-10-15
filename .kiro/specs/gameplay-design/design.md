@@ -2,7 +2,7 @@
 
 ## Overview
 
-Subreddit Excavator is a mobile-first archaeology game built on Devvit that transforms Reddit's history into an interactive excavation experience. The architecture separates into two distinct surfaces: a Reddit post card that serves as the entry point, and a full-screen webview containing the core 2D gameplay. Players use touch-based tools to uncover historical posts from specific subreddits, creating a tactile, rewarding experience optimized for 1-2 minute play sessions.
+Subreddit Excavator is a mobile-first archaeology game built on Devvit Web that transforms Reddit's history into an interactive excavation experience. The game uses two distinct post types: **TypeA (Dig Site Posts)** for gameplay and **TypeB (Museum Posts)** for personal collections. Each post displays a splash screen entry point within the webview that transitions to either the excavation game or museum gallery. Players use touch-based tools to uncover historical posts from specific subreddits, creating a tactile, rewarding experience optimized for 1-2 minute play sessions.
 
 ## Architecture
 
@@ -11,7 +11,8 @@ Subreddit Excavator is a mobile-first archaeology game built on Devvit that tran
 ```mermaid
 graph TB
     subgraph "Reddit Feed"
-        PostCard[Post Card Component]
+        TypeAPost[TypeA: Dig Site Post]
+        TypeBPost[TypeB: Museum Post]
     end
     
     subgraph "Devvit Server"
@@ -20,73 +21,128 @@ graph TB
         RedditAPI[Reddit API Client]
     end
     
-    subgraph "Webview (Full-Screen Gameplay)"
+    subgraph "TypeA Webview (Excavation Game)"
+        SplashA[Splash Screen A]
         GameEngine[Game Engine]
         DigScene[Dig Scene Renderer]
         ToolSystem[Tool System]
         ArtifactSystem[Artifact System]
-        UILayer[UI Layer]
     end
     
-    PostCard -->|Click "Enter Digsite"| GameEngine
+    subgraph "TypeB Webview (Museum)"
+        SplashB[Splash Screen B]
+        MuseumUI[Museum UI]
+        ArtifactGallery[Artifact Gallery]
+    end
+    
+    TypeAPost -->|Opens Webview| SplashA
+    TypeBPost -->|Opens Webview| SplashB
+    
+    SplashA -->|Click "Enter Digsite"| GameEngine
+    SplashB -->|Click "View Museum"| MuseumUI
+    
     GameEngine <-->|API Calls| API
+    MuseumUI <-->|API Calls| API
     API <--> Redis
     API <--> RedditAPI
     
     GameEngine --> DigScene
     GameEngine --> ToolSystem
     GameEngine --> ArtifactSystem
-    GameEngine --> UILayer
+    MuseumUI --> ArtifactGallery
 ```
 
-### Component Separation
+### Post Type Architecture
 
-**Post Card (Devvit Blocks)**
-- Rendered using Devvit's native blocks API
-- Displays static information: target subreddit, community stats
-- Minimal interactivity: single "Enter Digsite" button
-- Fetches data from Redis on render
+**TypeA: Dig Site Post (Dynamic, Gameplay-Focused)**
+- Any subreddit can be the target of excavation
+- Themed based on target subreddit (colors, biome)
+- Shows community stats (artifacts found/broken at this site)
+- Splash screen displays: target subreddit, stats, "Enter Digsite" button
+- Opens webview with canvas-based excavation game
+- Multiple TypeA posts can exist for different subreddits
 
-**Webview (React + Canvas)**
-- Full-screen immersive gameplay
-- Canvas-based 2D rendering for dig scene
-- React components for UI overlays (discovery modal, museum)
+**TypeB: Museum Post (Personal, Collection-Focused)**
+- One per player (personal museum)
+- Shows player's discovered artifacts and progression
+- Splash screen displays: player stats, highlights, "View Museum" button
+- Opens webview with artifact gallery and collection management
+- Persistent across all dig sites
+
+**Webview Architecture (React + Canvas)**
+- Splash screen serves as entry point within webview
+- Full-screen immersive experience after splash transition
+- Canvas-based 2D rendering for dig scene (TypeA)
+- React components for UI overlays and museum (TypeB)
 - Real-time interaction with touch events
 - Communicates with server via REST API
 
 ## Components and Interfaces
 
-### 1. Post Card Component (Devvit Blocks)
+### 1. Splash Screen Components (React)
+
+**TypeA Splash Screen (Dig Site Entry)**
 
 **Purpose:** Entry point that entices players to start excavation
 
 **Structure:**
 ```typescript
 interface DigSitePostData {
+  postType: 'typeA';
+  postId: string;
   targetSubreddit: string;        // e.g., "aww", "denmark"
   artifactsFound: number;          // Community total
   artifactsBroken: number;         // Community total
   subredditTheme: {
     primaryColor: string;          // Extracted from subreddit
     iconUrl?: string;
+    biomeType: 'grass' | 'rock' | 'sand' | 'swamp';
   };
 }
 ```
 
 **Rendering Logic:**
-- Fetch `DigSitePostData` from Redis using post ID
-- Display subreddit name prominently with theming
-- Show community stats in readable format
-- Render "Enter Digsite" button that opens webview
+- Fetch `DigSitePostData` from server API using post ID
+- Display target subreddit name prominently with theming
+- Show community stats in readable format ("X artifacts found, Y broken")
+- Render "Enter Digsite" button that transitions to game
+- Apply subreddit-based visual theming (colors, biome preview)
 
-### 2. Game Engine (Webview Core)
+**TypeB Splash Screen (Museum Entry)**
+
+**Purpose:** Entry point to player's personal collection
+
+**Structure:**
+```typescript
+interface MuseumPostData {
+  postType: 'typeB';
+  postId: string;
+  userId: string;
+  playerStats: {
+    totalArtifactsFound: number;
+    totalArtifactsBroken: number;
+    unlockedSubreddits: number;
+    recentDiscoveries: ArtifactPreview[];
+  };
+}
+```
+
+**Rendering Logic:**
+- Fetch `MuseumPostData` from server API using user ID
+- Display player's total stats and highlights
+- Show preview of 3-5 recent discoveries
+- Render "View Museum" button that transitions to museum
+- Display progression indicators (themed sets completed, etc.)
+
+### 2. Game Engine (TypeA Webview Core)
 
 **Purpose:** Orchestrates all gameplay systems and manages game state
 
 **State Management:**
 ```typescript
 interface GameState {
-  phase: 'loading' | 'playing' | 'discovered' | 'museum';
+  phase: 'splash' | 'playing' | 'discovered' | 'museum_preview';
+  postType: 'typeA';
   digSite: DigSiteData;
   artifact: ArtifactData;
   dirtLayers: DirtLayer[][];      // 2D grid of depth values
@@ -95,10 +151,15 @@ interface GameState {
 }
 
 interface DigSiteData {
+  postId: string;
   targetSubreddit: string;
   biome: 'grass' | 'rock' | 'sand' | 'swamp';
   dirtMaterials: DirtMaterial[];  // 3-5 randomized materials
   borderColor: string;
+  communityStats: {
+    artifactsFound: number;
+    artifactsBroken: number;
+  };
 }
 
 interface ArtifactData {
@@ -121,11 +182,12 @@ interface PlayerStats {
 ```
 
 **Initialization Flow:**
-1. Webview receives `postId` and `targetSubreddit` from URL params
-2. Fetch dig site configuration from `/api/digsite/:postId`
-3. Generate randomized dirt layers and artifact placement
-4. Initialize canvas renderer and tool system
-5. Transition to 'playing' phase immediately (no loading screen)
+1. Webview loads with splash screen showing post data
+2. User clicks "Enter Digsite" button
+3. Fetch dig site configuration from `/api/digsite/:postId`
+4. Generate randomized dirt layers and artifact placement
+5. Initialize canvas renderer and tool system
+6. Transition from 'splash' to 'playing' phase
 
 ### 3. Dig Scene Renderer (Canvas)
 
@@ -289,7 +351,7 @@ class ArtifactGenerator {
   }
   
   private async generatePostArtifact(subreddit: string): Promise<ArtifactData> {
-    // Fetch historical post from Reddit API
+    // Fetch historical post from Reddit API via server
     const post = await this.fetchHistoricalPost(subreddit);
     
     return {
@@ -409,7 +471,7 @@ const DiscoveryModal: React.FC<DiscoveryModalProps> = ({ artifact, onAddToMuseum
 };
 ```
 
-**Museum Component:**
+**Museum Component (TypeB):**
 ```tsx
 interface MuseumProps {
   playerStats: PlayerStats;
@@ -421,6 +483,11 @@ const Museum: React.FC<MuseumProps> = ({ playerStats, onArtifactClick, onRelicCl
   return (
     <div className="museum">
       <h1>Your Museum</h1>
+      <div className="stats-summary">
+        <p>Artifacts Found: {playerStats.artifactsFound}</p>
+        <p>Artifacts Broken: {playerStats.artifactsBroken}</p>
+        <p>Unlocked Subreddits: {playerStats.unlockedSubreddits.length}</p>
+      </div>
       <div className="artifact-grid">
         {playerStats.collectedArtifacts.map(artifact => (
           <ArtifactTile 
@@ -446,13 +513,26 @@ const Museum: React.FC<MuseumProps> = ({ playerStats, onArtifactClick, onRelicCl
 
 ### Redis Storage Schema
 
-**Dig Site Post Data:**
+**TypeA: Dig Site Post Data**
 ```
-Key: digsite:{postId}
+Key: post:typeA:{postId}
 Value: {
+  postType: 'typeA',
   targetSubreddit: string,
   artifactsFound: number,
   artifactsBroken: number,
+  createdAt: timestamp,
+  createdBy: userId
+}
+```
+
+**TypeB: Museum Post Data**
+```
+Key: post:typeB:{userId}
+Value: {
+  postType: 'typeB',
+  postId: string,
+  userId: string,
   createdAt: timestamp
 }
 ```
@@ -469,7 +549,8 @@ Value: {
       type: 'post' | 'relic',
       redditData: {...},
       discoveredAt: timestamp,
-      isBroken: boolean
+      isBroken: boolean,
+      sourceDigSite: postId
     }
   ],
   unlockedSubreddits: string[]
@@ -491,14 +572,48 @@ TTL: 1 hour (ephemeral per session)
 ### API Response Types
 
 ```typescript
+// TypeA: Dig Site APIs
 interface GetDigSiteResponse {
+  postType: 'typeA';
   targetSubreddit: string;
   biome: BiomeType;
   dirtMaterials: DirtMaterial[];
   borderColor: string;
   artifact: ArtifactData;
+  communityStats: {
+    artifactsFound: number;
+    artifactsBroken: number;
+  };
 }
 
+interface CreateDigSiteRequest {
+  targetSubreddit: string;
+}
+
+interface CreateDigSiteResponse {
+  postType: 'typeA';
+  postId: string;
+  postUrl: string;
+}
+
+// TypeB: Museum APIs
+interface GetMuseumResponse {
+  postType: 'typeB';
+  userId: string;
+  playerStats: PlayerStats;
+}
+
+interface CreateMuseumRequest {
+  userId: string;
+}
+
+interface CreateMuseumResponse {
+  postType: 'typeB';
+  postId: string;
+  postUrl: string;
+}
+
+// Shared APIs
 interface UpdateStatsRequest {
   postId: string;
   userId: string;
@@ -511,19 +626,10 @@ interface UpdateStatsResponse {
     artifactsFound: number;
     artifactsBroken: number;
   };
-}
-
-interface GetMuseumResponse {
-  playerStats: PlayerStats;
-}
-
-interface CreateDigSiteRequest {
-  targetSubreddit: string;
-}
-
-interface CreateDigSiteResponse {
-  postId: string;
-  postUrl: string;
+  newPlayerStats: {
+    artifactsFound: number;
+    artifactsBroken: number;
+  };
 }
 ```
 
@@ -586,13 +692,14 @@ interface CreateDigSiteResponse {
 ### Integration Tests
 
 **API Endpoint Tests:**
-- Test `/api/digsite/:postId` returns valid data
+- Test `/api/digsite/:postId` returns valid TypeA data
+- Test `/api/museum/:userId` returns valid TypeB data
 - Test `/api/stats/update` increments counters correctly
-- Test `/api/museum/:userId` returns player data
-- Test `/api/digsite/create` creates new post
+- Test `/api/digsite/create` creates new TypeA post
+- Test `/api/museum/create` creates new TypeB post
 
 **Redis Integration Tests:**
-- Test data persistence and retrieval
+- Test data persistence and retrieval for both post types
 - Test TTL expiration for artifact cache
 - Test concurrent updates to community stats
 
@@ -610,6 +717,7 @@ interface CreateDigSiteResponse {
 - Test breaking an artifact with shovel
 - Test discovering a subreddit relic
 - Test museum navigation and artifact viewing
+- Test transitioning from TypeA to TypeB posts
 
 **Performance Testing:**
 - Measure frame rate during active digging
@@ -618,15 +726,38 @@ interface CreateDigSiteResponse {
 
 ## Technical Decisions and Rationales
 
+### Two Post Types Architecture
+
+**Decision:** Use TypeA for dig sites and TypeB for museums
+
+**Rationale:**
+- Clear separation of concerns (gameplay vs collection)
+- TypeA posts can be created for any subreddit (scalable)
+- TypeB posts are personal and persistent (one per player)
+- Both use same webview infrastructure with different entry points
+- Allows community-driven dig site creation while maintaining personal progression
+
+### Splash Screen as Entry Point
+
+**Decision:** Use splash screen within webview as entry point
+
+**Rationale:**
+- Provides context before gameplay (target subreddit, stats)
+- Single button click to enter game (low friction)
+- Aligns with Devvit Web architecture (no separate Blocks)
+- Allows for visual theming and engagement before gameplay
+- Consistent pattern for both TypeA and TypeB posts
+
 ### Canvas vs DOM Rendering
 
-**Decision:** Use HTML5 Canvas for dig scene rendering
+**Decision:** Use HTML5 Canvas for dig scene rendering (TypeA only)
 
 **Rationale:**
 - Better performance for real-time dirt manipulation
 - Easier to implement layered depth effects
 - Smoother particle systems and visual effects
 - Mobile browsers handle canvas touch events well
+- TypeB museum uses React components (no canvas needed)
 
 ### Artifact Placement Algorithm
 
@@ -639,12 +770,13 @@ interface CreateDigSiteResponse {
 
 ### Community Stats vs Personal Stats
 
-**Decision:** Display community stats on post card, personal stats in museum
+**Decision:** Display community stats on TypeA splash, personal stats on TypeB splash
 
 **Rationale:**
 - Community stats create social proof and engagement
 - Personal stats provide individual progression tracking
-- Separation prevents information overload on post card
+- Separation prevents information overload
+- Clear distinction between post types
 
 ### Subreddit Relic Rarity
 
@@ -664,11 +796,13 @@ interface CreateDigSiteResponse {
 - TTL ensures fresh content on return visits
 - Reduces Reddit API calls for same post
 
-### Immediate Gameplay (No Loading Screen)
+### One Museum Per Player
 
-**Decision:** Open webview directly to dig scene
+**Decision:** Each player has exactly one TypeB museum post
 
 **Rationale:**
-- Reduces friction and time-to-play
-- Aligns with mobile browsing behavior (quick sessions)
-- Post card already provides context (no need for intro)
+- Centralized collection management
+- Easy to find and share personal museum
+- Prevents clutter from multiple museum posts
+- Clear progression tracking in one location
+- Can be pinned or bookmarked by player

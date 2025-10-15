@@ -10,6 +10,10 @@ import { redis, reddit, createServer, context, getServerPort } from '@devvit/web
 import { createPost, createPostA, createPostB } from './core/post';
 import { getDataFeed } from './core/data';
 import { createUserPost, createUserComment } from './core/userActions';
+import { getDigSiteData, getCommunityStats, updateCommunityStats } from './core/digsite';
+import { fetchHistoricalPost, getSubredditTheme } from './core/reddit';
+import { getPlayerStats, addArtifactToMuseum, unlockSubreddit } from './core/museum';
+import { BiomeType, DirtMaterial, ArtifactData, CollectedArtifact } from '../shared/types/game';
 
 const app = express();
 
@@ -195,9 +199,340 @@ router.post<unknown, UserActionResponse, UserActionRequest>(
   }
 );
 
+// Dig site endpoints
+router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
+  try {
+    const { postId } = req.params;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    // Check if dig site data already exists
+    let digSiteData = await getDigSiteData(postId);
+
+    if (!digSiteData) {
+      // Get the target subreddit from Redis (set during post creation)
+      const storedTarget = await redis.get(`digsite:${postId}:target`);
+      const targetSubreddit = storedTarget || 'AskReddit'; // Fallback
+      console.log(`Generating dig site for r/${targetSubreddit}`);
+      
+      const theme = await getSubredditTheme(targetSubreddit);
+      
+      // Generate random biome
+      const biomes = [BiomeType.GRASS, BiomeType.ROCK, BiomeType.SAND, BiomeType.SWAMP];
+      const biome = biomes[Math.floor(Math.random() * biomes.length)]!;
+      
+      // Generate random dirt materials (2-3 types)
+      const allMaterials = [DirtMaterial.SOIL, DirtMaterial.CLAY, DirtMaterial.GRAVEL, DirtMaterial.MUD];
+      const numMaterials = 2 + Math.floor(Math.random() * 2);
+      const dirtMaterials: DirtMaterial[] = [];
+      for (let i = 0; i < numMaterials; i++) {
+        const material = allMaterials[Math.floor(Math.random() * allMaterials.length)]!;
+        if (!dirtMaterials.includes(material)) {
+          dirtMaterials.push(material);
+        }
+      }
+      
+      // Generate artifact (5% chance for relic, 95% for post)
+      const isRelic = Math.random() < 0.05;
+      let artifact: ArtifactData;
+      
+      if (isRelic) {
+        artifact = {
+          type: 'subreddit_relic',
+          position: {
+            x: 30 + Math.floor(Math.random() * 40),
+            y: 30 + Math.floor(Math.random() * 40),
+          },
+          depth: 40 + Math.floor(Math.random() * 20),
+          width: 20,
+          height: 20,
+          relic: theme,
+        };
+      } else {
+        const post = await fetchHistoricalPost(targetSubreddit);
+        if (!post) {
+          // Fallback if no post found
+          res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch historical post for dig site',
+          });
+          return;
+        }
+        artifact = {
+          type: 'post',
+          position: {
+            x: 30 + Math.floor(Math.random() * 40),
+            y: 30 + Math.floor(Math.random() * 40),
+          },
+          depth: 40 + Math.floor(Math.random() * 20),
+          width: 25,
+          height: 15,
+          post,
+        };
+      }
+      
+      const communityStats = await getCommunityStats(postId);
+      
+      digSiteData = {
+        postId,
+        targetSubreddit,
+        biome,
+        dirtMaterials,
+        borderColor: theme.primaryColor,
+        artifact,
+        communityStats,
+        ...(theme.iconUrl && { subredditIconUrl: theme.iconUrl }),
+      };
+    }
+
+    res.json(digSiteData);
+  } catch (error) {
+    console.error('Error in /api/digsite/:postId:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch dig site data',
+    });
+  }
+});
+
+router.post('/api/digsite/create', async (req, res): Promise<void> => {
+  try {
+    const { targetSubreddit } = req.body;
+
+    if (!targetSubreddit) {
+      res.status(400).json({
+        status: 'error',
+        message: 'targetSubreddit is required',
+      });
+      return;
+    }
+
+    // Create a new TypeA post for this dig site
+    const post = await createPostA();
+    
+    // Store the target subreddit for this post
+    await redis.set(`digsite:${post.id}:target`, targetSubreddit);
+    
+    // Initialize community stats
+    await redis.set(`digsite:${post.id}:stats`, JSON.stringify({
+      artifactsFound: 0,
+      artifactsBroken: 0,
+    }));
+
+    res.json({
+      success: true,
+      postId: post.id,
+      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
+    });
+  } catch (error) {
+    console.error('Error creating dig site:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to create dig site',
+    });
+  }
+});
+
+router.post('/api/stats/update', async (req, res): Promise<void> => {
+  try {
+    const { postId, action } = req.body;
+    const username = await reddit.getCurrentUsername();
+
+    if (!postId || !action) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId and action are required',
+      });
+      return;
+    }
+
+    if (action !== 'found' && action !== 'broken') {
+      res.status(400).json({
+        status: 'error',
+        message: 'action must be "found" or "broken"',
+      });
+      return;
+    }
+
+    // Update community stats
+    const communityStats = await updateCommunityStats(postId, action);
+    
+    // Update player stats
+    const userId = username || 'anonymous';
+    const playerStats = await getPlayerStats(userId);
+
+    res.json({
+      success: true,
+      communityStats,
+      playerStats: {
+        artifactsFound: playerStats.artifactsFound,
+        artifactsBroken: playerStats.artifactsBroken,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating stats:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to update stats',
+    });
+  }
+});
+
+// Museum endpoints
+router.get('/api/museum/:userId', async (req, res): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'userId is required',
+      });
+      return;
+    }
+
+    const playerStats = await getPlayerStats(userId);
+    res.json(playerStats);
+  } catch (error) {
+    console.error('Error fetching museum data:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch museum data',
+    });
+  }
+});
+
+router.post('/api/museum/create', async (_req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    const userId = username || 'anonymous';
+
+    // Create a new TypeB post for this museum
+    const post = await createPostB();
+    
+    // Initialize player stats if they don't exist
+    await getPlayerStats(userId);
+
+    res.json({
+      success: true,
+      postId: post.id,
+      userId,
+      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
+    });
+  } catch (error) {
+    console.error('Error creating museum:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to create museum',
+    });
+  }
+});
+
+router.post('/api/museum/add-artifact', async (req, res): Promise<void> => {
+  try {
+    const { artifactData, sourceDigSite, isBroken } = req.body;
+    const username = await reddit.getCurrentUsername();
+    const userId = username || 'anonymous';
+
+    if (!artifactData || !sourceDigSite) {
+      res.status(400).json({
+        status: 'error',
+        message: 'artifactData and sourceDigSite are required',
+      });
+      return;
+    }
+
+    const collectedArtifact: CollectedArtifact = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: artifactData.type,
+      discoveredAt: Date.now(),
+      sourceDigSite,
+      isBroken: isBroken || false,
+      post: artifactData.post,
+      relic: artifactData.relic,
+    };
+
+    const updatedStats = await addArtifactToMuseum(userId, collectedArtifact);
+    
+    // If it's a subreddit relic, unlock the subreddit
+    if (artifactData.type === 'subreddit_relic' && artifactData.relic) {
+      await unlockSubreddit(userId, artifactData.relic.subredditName);
+    }
+
+    res.json({
+      success: true,
+      museum: updatedStats,
+    });
+  } catch (error) {
+    console.error('Error adding artifact to museum:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to add artifact',
+    });
+  }
+});
+
+// Relic discovery endpoint
+router.post('/api/relic/claim', async (req, res): Promise<void> => {
+  try {
+    const { subredditName, sourcePostId } = req.body;
+    const username = await reddit.getCurrentUsername();
+    const userId = username || 'anonymous';
+
+    if (!subredditName || !sourcePostId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'subredditName and sourcePostId are required',
+      });
+      return;
+    }
+
+    // Unlock the subreddit for the player
+    await unlockSubreddit(userId, subredditName);
+    
+    // Post a comment on the source dig site announcing the discovery
+    try {
+      await reddit.submitComment({
+        id: sourcePostId,
+        text: `🎉 ${username || 'A player'} discovered the r/${subredditName} relic! A new dig site has been unlocked!`,
+      });
+    } catch (commentError) {
+      console.error('Failed to post discovery comment:', commentError);
+      // Continue even if comment fails
+    }
+    
+    // Create a new dig site post for the discovered subreddit
+    const newDigSite = await createPostA();
+    await redis.set(`digsite:${newDigSite.id}:target`, subredditName);
+    await redis.set(`digsite:${newDigSite.id}:stats`, JSON.stringify({
+      artifactsFound: 0,
+      artifactsBroken: 0,
+    }));
+
+    res.json({
+      success: true,
+      newDigSiteId: newDigSite.id,
+      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${newDigSite.id}`,
+    });
+  } catch (error) {
+    console.error('Error claiming relic:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to claim relic',
+    });
+  }
+});
+
 router.post('/internal/on-app-install', async (_req, res): Promise<void> => {
   try {
-    const post = await createPost();
+    // Create a default dig site for AskReddit on install
+    const post = await createPostA('AskReddit');
 
     res.json({
       status: 'success',
@@ -214,7 +549,8 @@ router.post('/internal/on-app-install', async (_req, res): Promise<void> => {
 
 router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
   try {
-    const post = await createPost();
+    // Default to AskReddit for the legacy menu action
+    const post = await createPostA('AskReddit');
 
     res.json({
       navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
@@ -228,9 +564,11 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
   }
 });
 
-router.post('/internal/menu/create-post-a', async (_req, res): Promise<void> => {
+router.post('/internal/menu/create-post-a', async (req, res): Promise<void> => {
   try {
-    const post = await createPostA();
+    // Allow specifying target subreddit, default to popular ones
+    const targetSubreddit = (req.body as any)?.targetSubreddit || 'AskReddit';
+    const post = await createPostA(targetSubreddit);
 
     res.json({
       navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
