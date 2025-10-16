@@ -185,9 +185,15 @@ export class GameEngine {
     const gridW = this.state.dirtLayer.width;
     const gridH = this.state.dirtLayer.height;
     const looksCanonical = artifact.width <= 100 && artifact.height <= 100;
-    const clampDepth = (d?: number): number => {
-      const val = typeof d === 'number' ? d : 50;
-      return Math.max(40, Math.min(60, Math.round(val)));
+    const assignDepth = (_d?: number): number => {
+      // Choose a random layer from the surface index [40..60] (40=deeper, 60=bottom)
+      // Our dirt model uses "remaining thickness" where 60 is surface and 0 is bottom.
+      // Convert layer index L (from surface) to remaining-thickness T by T = max(0, 60 - L).
+      const layerFromSurface = 40 + Math.floor(Math.random() * 21); // 40..60
+      const remainingDepth = Math.max(0, 60 - layerFromSurface);
+      // Store and log for verification
+      (this as any)._artifactLayerFromSurface = layerFromSurface;
+      return remainingDepth; // smaller values are deeper in our model
     };
     if (looksCanonical) {
       this.state.artifact = {
@@ -198,11 +204,17 @@ export class GameEngine {
         },
         width: Math.max(1, Math.round((artifact.width / 100) * gridW)),
         height: Math.max(1, Math.round((artifact.height / 100) * gridH)),
-        depth: clampDepth(artifact.depth),
+        depth: assignDepth(artifact.depth),
       };
     } else {
-      this.state.artifact = { ...artifact, depth: clampDepth(artifact.depth) };
+      this.state.artifact = { ...artifact, depth: assignDepth(artifact.depth) };
     }
+    console.log(
+      'Artifact placement -> layerFromSurface:',
+      (this as any)._artifactLayerFromSurface,
+      ' remainingDepth:',
+      this.state.artifact.depth
+    );
   }
 
   public start(): void {

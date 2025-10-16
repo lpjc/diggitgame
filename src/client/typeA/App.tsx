@@ -66,7 +66,7 @@ export const App = () => {
     // Initialize tool manager
     const toolManager = new ToolManager({
       dirtLayer: engine.getState().dirtLayer,
-      artifact: digSiteData.artifact,
+      artifact: engine.getState().artifact,
       canvas,
       ctx,
       // Placeholder, updated by engine.setupCanvas()
@@ -97,6 +97,7 @@ export const App = () => {
       cellHeight: vp.cellHeight,
       originX: vp.originX,
       originY: vp.originY,
+      artifact: engine.getState().artifact,
     });
 
     // No DOM artifact layer needed now; artifact renders in-canvas

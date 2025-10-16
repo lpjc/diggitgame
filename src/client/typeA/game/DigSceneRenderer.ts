@@ -119,11 +119,12 @@ export class DigSceneRenderer {
     const baseMaterial: DirtMaterial = materials[0] ?? DirtMaterial.SOIL;
     const baseColor = this.getMaterialColor(baseMaterial);
 
-    // Quantize depth to make hard steps instead of smooth gradients
-    const clamped = Math.max(0, Math.min(60, depth));
-    const steps = 6; // number of visible bands
-    const stepIdx = Math.round((clamped / 60) * steps);
-    const darkenAmount = (stepIdx / steps) * 0.5; // up to 50% darker in discrete steps
+    // One shade per integer layer; surface (60) light, deeper (0) darker
+    const d = Math.max(0, Math.min(60, Math.round(depth)));
+    const t = (60 - d) / 60; // 0 at surface, 1 at deepest
+    // Steeper curve for stronger contrast
+    const steep = Math.pow(t, 1.6);
+    const darkenAmount = Math.min(0.85, steep * 0.85); // up to 85% darker at deepest
 
     return this.adjustBrightness(baseColor, -darkenAmount);
   }

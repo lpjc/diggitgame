@@ -15,13 +15,7 @@ export class DetectorTool implements Tool {
   }
 
   onUpdate(context: ToolContext, _deltaTime: number): void {
-    if (!this.isActive || !this.currentPosition) return;
-
-    const now = Date.now();
-    if (now - this.lastPingTime >= this.pingInterval) {
-      this.ping(this.currentPosition.x, this.currentPosition.y, context);
-      this.lastPingTime = now;
-    }
+    // No periodic pings; detector pings only on click (pointer down)
   }
 
   onDeactivate(_context: ToolContext): void {
@@ -50,11 +44,31 @@ export class DetectorTool implements Tool {
     const { cellWidth, cellHeight, originX, originY } = context;
     
     // Convert screen coordinates to grid coordinates
-    const gridX = Math.floor((x - originX) / cellWidth);
-    const gridY = Math.floor((y - originY) / cellHeight);
+    const gridXF = (x - originX) / cellWidth;
+    const gridYF = (y - originY) / cellHeight;
+    const gridX = Math.floor(gridXF);
+    const gridY = Math.floor(gridYF);
 
-    // Calculate distance to nearest edge of artifact
-    const distance = this.calculateDistanceToArtifact(gridX, gridY, artifact);
+    // Calculate distance to circular artifact boundary in grid cells
+    const distance = this.calculateDistanceToArtifactCircle(gridX, gridY, artifact);
+    // Debug: log distances and mapping
+    const cx = artifact.position.x + artifact.width / 2;
+    const cy = artifact.position.y + artifact.height / 2;
+    const radius = Math.min(artifact.width, artifact.height) / 2;
+    const dx = gridX + 0.5 - cx;
+    const dy = gridY + 0.5 - cy;
+    const centerDistance = Math.sqrt(dx * dx + dy * dy);
+    const thresholds = { veryClose: 1, close: 3, far: 6 };
+    console.log('DETECTOR PING', {
+      raw: { x, y },
+      origin: { originX, originY },
+      cell: { cellWidth, cellHeight },
+      grid: { gridXF, gridYF, gridX, gridY },
+      artifactRect: { ax: artifact.position.x, ay: artifact.position.y, aw: artifact.width, ah: artifact.height },
+      artifactCircle: { cx, cy, radius },
+      distances: { centerDistance, boundaryDistance: distance },
+      thresholds,
+    });
     const proximity = this.getProximityLevel(distance);
 
     // Visual feedback
@@ -64,28 +78,27 @@ export class DetectorTool implements Tool {
     this.playBeep(proximity);
   }
 
-  private calculateDistanceToArtifact(
+  private calculateDistanceToArtifactCircle(
     x: number,
     y: number,
     artifact: { position: { x: number; y: number }; width: number; height: number }
   ): number {
     const { position, width, height } = artifact;
-    
-    // Find closest point on artifact rectangle
-    const closestX = Math.max(position.x, Math.min(x, position.x + width));
-    const closestY = Math.max(position.y, Math.min(y, position.y + height));
-    
-    // Calculate Euclidean distance
-    const dx = x - closestX;
-    const dy = y - closestY;
-    
-    return Math.sqrt(dx * dx + dy * dy);
+    const cx = position.x + width / 2;
+    const cy = position.y + height / 2;
+    const radius = Math.min(width, height) / 2;
+    const dx = x + 0.5 - cx; // use cell center
+    const dy = y + 0.5 - cy;
+    const distToCenter = Math.sqrt(dx * dx + dy * dy);
+    const distToBoundary = distToCenter - radius;
+    return Math.max(0, distToBoundary);
   }
 
   private getProximityLevel(distance: number): ProximityLevel {
-    if (distance < 5) return ProximityLevel.VERY_CLOSE;
-    if (distance < 15) return ProximityLevel.CLOSE;
-    if (distance < 30) return ProximityLevel.FAR;
+    // Distance is in grid cells to boundary; tune thresholds to big pixels
+    if (distance < 1) return ProximityLevel.VERY_CLOSE;
+    if (distance < 3) return ProximityLevel.CLOSE;
+    if (distance < 6) return ProximityLevel.FAR;
     return ProximityLevel.VERY_FAR;
   }
 
@@ -95,22 +108,51 @@ export class DetectorTool implements Tool {
     proximity: ProximityLevel,
     context: ToolContext
   ): void {
-    const { ctx } = context;
-    const color = this.getProximityColor(proximity);
+    const container = context.canvas.parentElement as HTMLElement | null;
+    if (!container) return;
+    this.ensureRippleStyles();
 
-    // Draw expanding circle
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.7;
-    
+    const color = this.getProximityColor(proximity);
+    const baseSize = Math.min(context.cellWidth, context.cellHeight);
+    const diameter = Math.max(80, Math.floor(baseSize * 10));
+
+    // Create 3 delayed ripples for a nicer effect
     for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.arc(x, y, 10 + i * 5, 0, Math.PI * 2);
-      ctx.stroke();
+      const ring = document.createElement('div');
+      ring.className = 'detector-ripple';
+      ring.style.left = `${x}px`;
+      ring.style.top = `${y}px`;
+      ring.style.width = `${diameter}px`;
+      ring.style.height = `${diameter}px`;
+      ring.style.borderColor = color;
+      ring.style.animationDelay = `${i * 80}ms`;
+      container.appendChild(ring);
+      ring.addEventListener('animationend', () => ring.remove());
     }
-    
-    ctx.restore();
+  }
+
+  private ensureRippleStyles(): void {
+    if (document.getElementById('detector-ripple-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'detector-ripple-styles';
+    style.textContent = `
+      .detector-ripple {
+        position: absolute;
+        pointer-events: none;
+        border: 3px solid #ff0000;
+        border-radius: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0.9;
+        z-index: 10;
+        animation: detector-ripple-anim 700ms ease-out forwards;
+      }
+      @keyframes detector-ripple-anim {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+        70% { opacity: 0.5; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private getProximityColor(proximity: ProximityLevel): string {
