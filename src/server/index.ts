@@ -15,6 +15,10 @@ import { getDigSiteData, getCommunityStats, updateCommunityStats } from './core/
 import { fetchHistoricalPost, getSubredditTheme } from './core/reddit';
 import { getPlayerStats, addArtifactToMuseum, unlockSubreddit } from './core/museum';
 import { BiomeType, DirtMaterial, ArtifactData, CollectedArtifact } from '../shared/types/game';
+import { saveDiscoveredArtifact } from './core/artifact-discovery';
+import { getPlayerMuseum, sortArtifacts, filterArtifacts } from './core/museum-data';
+import { getArtifactById } from './core/artifact-db';
+import { SaveArtifactRequest } from '../shared/types/artifact';
 
 const app = express();
 
@@ -385,10 +389,76 @@ router.post('/api/stats/update', async (req, res): Promise<void> => {
   }
 });
 
-// Museum endpoints
+// Artifact persistence endpoints
+router.post('/api/artifact/save', async (req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    const userId = username || 'anonymous';
+    
+    const saveRequest: SaveArtifactRequest = {
+      userId,
+      artifactData: req.body.artifactData,
+      sourceDigSite: req.body.sourceDigSite,
+      isBroken: req.body.isBroken || false,
+    };
+
+    if (!saveRequest.artifactData || !saveRequest.sourceDigSite) {
+      res.status(400).json({
+        status: 'error',
+        message: 'artifactData and sourceDigSite are required',
+      });
+      return;
+    }
+
+    const result = await saveDiscoveredArtifact(saveRequest);
+    res.json(result);
+  } catch (error) {
+    console.error('Error saving artifact:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to save artifact',
+    });
+  }
+});
+
+router.get('/api/artifact/:artifactId', async (req, res): Promise<void> => {
+  try {
+    const { artifactId } = req.params;
+
+    if (!artifactId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'artifactId is required',
+      });
+      return;
+    }
+
+    const artifact = await getArtifactById(artifactId);
+    
+    if (!artifact) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Artifact not found',
+      });
+      return;
+    }
+
+    res.json(artifact);
+  } catch (error) {
+    console.error('Error fetching artifact:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch artifact',
+    });
+  }
+});
+
+// Museum endpoints (updated to use new artifact persistence system)
 router.get('/api/museum/:userId', async (req, res): Promise<void> => {
   try {
     const { userId } = req.params;
+    const sortBy = (req.query.sortBy as 'date' | 'rarity' | 'subreddit') || 'date';
+    const includeBroken = req.query.includeBroken !== 'false';
 
     if (!userId) {
       res.status(400).json({
@@ -398,8 +468,20 @@ router.get('/api/museum/:userId', async (req, res): Promise<void> => {
       return;
     }
 
-    const playerStats = await getPlayerStats(userId);
-    res.json(playerStats);
+    // Get museum data with full artifact details
+    const museumData = await getPlayerMuseum(userId);
+    
+    // Filter artifacts
+    let artifacts = filterArtifacts(museumData.artifacts, includeBroken);
+    
+    // Sort artifacts
+    artifacts = sortArtifacts(artifacts, sortBy);
+
+    res.json({
+      userId: museumData.userId,
+      artifacts,
+      stats: museumData.stats,
+    });
   } catch (error) {
     console.error('Error fetching museum data:', error);
     res.status(500).json({

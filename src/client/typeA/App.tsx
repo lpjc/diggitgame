@@ -196,14 +196,30 @@ export const App = () => {
 
     try {
       console.log('Add to museum clicked');
-      await fetchAPI('/api/museum/add-artifact', {
+      
+      // Prepare artifact data for the new persistence system
+      const artifactData = {
+        type: digSiteData.artifact.type,
+        redditData: digSiteData.artifact.post,
+        relicData: digSiteData.artifact.relic,
+      };
+      
+      // Call new artifact persistence API
+      const response = await fetchAPI<{
+        success: boolean;
+        artifactId: string;
+        foundByCount: number;
+        rarityTier: string;
+      }>('/api/artifact/save', {
         method: 'POST',
         body: JSON.stringify({
-          artifactData: digSiteData.artifact,
+          artifactData,
           sourceDigSite: digSiteData.postId,
           isBroken: artifactSystemRef.current.isBrokenState(),
         }),
       });
+      
+      console.log(`Artifact saved! Rarity: ${response.rarityTier}, Found by ${response.foundByCount} players`);
       setArtifactAdded(true);
     } catch (error) {
       console.error('Failed to add artifact to museum:', error);

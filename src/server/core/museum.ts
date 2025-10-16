@@ -54,6 +54,24 @@ export async function addArtifactToMuseum(
 }
 
 /**
+ * Update player stats counters (for new artifact persistence system)
+ */
+export async function updatePlayerStatsCounters(
+  userId: string,
+  action: 'found' | 'broken'
+): Promise<void> {
+  const stats = await getPlayerStats(userId);
+
+  if (action === 'found') {
+    stats.artifactsFound++;
+  } else if (action === 'broken') {
+    stats.artifactsBroken++;
+  }
+
+  await storePlayerStats(stats);
+}
+
+/**
  * Unlock a subreddit for a player
  */
 export async function unlockSubreddit(userId: string, subredditName: string): Promise<PlayerStats> {
