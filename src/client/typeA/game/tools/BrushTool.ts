@@ -23,6 +23,11 @@ export class BrushTool implements Tool {
     });
   }
 
+  renderOverlay(context: ToolContext): void {
+    // Draw dust particles after main scene so they're visible
+    this.renderDustParticles(context.ctx);
+  }
+
   onDeactivate(_context: ToolContext): void {
     this.isBrushing = false;
     this.lastBrushPosition = null;

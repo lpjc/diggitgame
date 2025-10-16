@@ -7,6 +7,7 @@ export class ShovelTool implements Tool {
   private cooldown: number = 250; // faster cadence for better feel
   private artifactHitLocations: Set<string> = new Set();
   private impactParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
+  private ring?: { x: number; y: number; radius: number; life: number };
 
   onActivate(_context: ToolContext): void {
     this.lastDigTime = 0;
@@ -14,7 +15,17 @@ export class ShovelTool implements Tool {
   }
 
   onUpdate(_context: ToolContext, _deltaTime: number): void {
-    // No continuous updates needed
+    // Update particle lifetimes
+    this.impactParticles = this.impactParticles.filter((p) => {
+      p.x += p.vx * 0.5;
+      p.y += p.vy * 0.5;
+      p.life -= 16;
+      return p.life > 0;
+    });
+    if (this.ring) {
+      this.ring.life -= 16;
+      if (this.ring.life <= 0) this.ring = undefined;
+    }
   }
 
   onDeactivate(_context: ToolContext): void {
@@ -98,9 +109,8 @@ export class ShovelTool implements Tool {
 
     // Visual/audio feedback only on successful dig
     if (removedAny) {
-      this.showDigEffect(x, y, context, digRadius);
+      this.ring = { x, y, radius: digRadius, life: 180 };
       this.spawnImpactParticles(x, y);
-      this.drawImpactParticles(context);
       this.playThud();
       console.log('SHOVEL HIT!');
     }
@@ -123,12 +133,10 @@ export class ShovelTool implements Tool {
     return dx * dx + dy * dy <= radius * radius;
   }
 
-  private showDigEffect(x: number, y: number, context: ToolContext, radiusPx: number): void {
-    const { ctx } = context;
-
+  private showRing(ctx: CanvasRenderingContext2D, x: number, y: number, radiusPx: number, life: number): void {
     ctx.save();
-    // Hard-edged outline only (no soft fill)
-    ctx.strokeStyle = 'rgba(139, 115, 85, 0.9)';
+    const alpha = Math.max(0, Math.min(1, life / 180));
+    ctx.strokeStyle = `rgba(139, 115, 85, ${0.8 * alpha})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(x, y, radiusPx, 0, Math.PI * 2);
@@ -152,8 +160,7 @@ export class ShovelTool implements Tool {
     }
   }
 
-  private drawImpactParticles(context: ToolContext): void {
-    const { ctx } = context;
+  private drawImpactParticles(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.fillStyle = 'rgba(139, 115, 85, 0.9)';
     this.impactParticles.forEach((p) => {
@@ -179,6 +186,16 @@ export class ShovelTool implements Tool {
       osc.start(t);
       osc.stop(t + 0.13);
     } catch {}
+  }
+
+  renderOverlay(context: ToolContext): void {
+    const { ctx } = context;
+    if (this.ring) {
+      this.showRing(ctx, this.ring.x, this.ring.y, this.ring.radius, this.ring.life);
+    }
+    if (this.impactParticles.length > 0) {
+      this.drawImpactParticles(ctx);
+    }
   }
 
   private showCrackWarning(x: number, y: number, context: ToolContext): void {

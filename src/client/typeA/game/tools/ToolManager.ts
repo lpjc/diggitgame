@@ -40,6 +40,12 @@ export class ToolManager {
     }
   }
 
+  public renderOverlay(): void {
+    if (this.activeTool?.renderOverlay) {
+      this.activeTool.renderOverlay(this.context);
+    }
+  }
+
   public handlePointerDown(x: number, y: number): void {
     if (this.activeTool?.handlePointerDown) {
       this.activeTool.handlePointerDown(x, y, this.context);

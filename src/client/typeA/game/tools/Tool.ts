@@ -26,4 +26,6 @@ export interface Tool {
   handlePointerDown?(x: number, y: number, context: ToolContext): void;
   handlePointerMove?(x: number, y: number, context: ToolContext): void;
   handlePointerUp?(x: number, y: number, context: ToolContext): void;
+  // Optional overlay rendering drawn after the main scene each frame
+  renderOverlay?(context: ToolContext): void;
 }

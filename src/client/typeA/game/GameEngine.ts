@@ -312,6 +312,9 @@ export class GameEngine {
           digHeightPx: this.digHeightPx,
         }
       );
+      // Draw tool overlays after main scene
+      const toolManager = (this as any).toolManager as { renderOverlay?: () => void } | undefined;
+      if (toolManager?.renderOverlay) toolManager.renderOverlay();
     }
   }
 
