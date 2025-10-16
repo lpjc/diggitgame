@@ -195,6 +195,7 @@ export const App = () => {
     if (!digSiteData || !artifactSystemRef.current) return;
 
     try {
+      console.log('Add to museum clicked');
       await fetchAPI('/api/museum/add-artifact', {
         method: 'POST',
         body: JSON.stringify({
