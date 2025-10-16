@@ -6,6 +6,7 @@ export class ShovelTool implements Tool {
   private lastDigTime: number = 0;
   private cooldown: number = 250; // faster cadence for better feel
   private artifactHitLocations: Set<string> = new Set();
+  private impactParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
 
   onActivate(_context: ToolContext): void {
     this.lastDigTime = 0;
@@ -50,7 +51,8 @@ export class ShovelTool implements Tool {
 
     // Remove dirt in circular area (grid space to avoid duplicate hits per cell)
     const gridStep = Math.min(cellWidth, cellHeight);
-    const gridRadius = Math.max(1, Math.round(digRadius / gridStep));
+    const gridRadius = Math.max(1, Math.round(digRadius / gridStep) + 1); // +1 cell wider impact
+    let removedAny = false;
     for (let ty = -gridRadius; ty <= gridRadius; ty++) {
       for (let tx = -gridRadius; tx <= gridRadius; tx++) {
         const distGrid = Math.sqrt(tx * tx + ty * ty);
@@ -66,10 +68,10 @@ export class ShovelTool implements Tool {
             if (this.isArtifactCell(targetX, targetY, artifact)) {
               hitArtifact = true;
             }
-            dirtLayer.cells[targetY][targetX] = Math.max(
-              0,
-              dirtLayer.cells[targetY][targetX] - digDepth
-            );
+            const before = dirtLayer.cells[targetY][targetX];
+            const after = Math.max(0, before - digDepth);
+            if (after !== before) removedAny = true;
+            dirtLayer.cells[targetY][targetX] = after;
           }
         }
       }
@@ -94,9 +96,14 @@ export class ShovelTool implements Tool {
       }
     }
 
-    // Visual feedback
-    this.showDigEffect(x, y, context, digRadius);
-    console.log('SHOVEL HIT!');
+    // Visual/audio feedback only on successful dig
+    if (removedAny) {
+      this.showDigEffect(x, y, context, digRadius);
+      this.spawnImpactParticles(x, y);
+      this.drawImpactParticles(context);
+      this.playThud();
+      console.log('SHOVEL HIT!');
+    }
   }
 
   private isArtifactCell(
@@ -127,6 +134,51 @@ export class ShovelTool implements Tool {
     ctx.arc(x, y, radiusPx, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+  }
+
+  private spawnImpactParticles(x: number, y: number): void {
+    this.impactParticles = [];
+    const count = 16;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const speed = 2 + Math.random() * 3;
+      this.impactParticles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 300 + Math.random() * 300,
+      });
+    }
+  }
+
+  private drawImpactParticles(context: ToolContext): void {
+    const { ctx } = context;
+    ctx.save();
+    ctx.fillStyle = 'rgba(139, 115, 85, 0.9)';
+    this.impactParticles.forEach((p) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  private playThud(): void {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = 140; // low thud
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      const t = audioContext.currentTime;
+      gain.gain.setValueAtTime(0.6, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.start(t);
+      osc.stop(t + 0.13);
+    } catch {}
   }
 
   private showCrackWarning(x: number, y: number, context: ToolContext): void {
