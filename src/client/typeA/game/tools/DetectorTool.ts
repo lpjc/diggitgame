@@ -46,12 +46,12 @@ export class DetectorTool implements Tool {
   }
 
   private ping(x: number, y: number, context: ToolContext): void {
-    const { artifact, canvas } = context;
+    const { artifact } = context;
+    const { cellWidth, cellHeight, originX, originY } = context;
     
     // Convert screen coordinates to grid coordinates
-    const cellSize = 5;
-    const gridX = Math.floor(x / cellSize);
-    const gridY = Math.floor(y / cellSize);
+    const gridX = Math.floor((x - originX) / cellWidth);
+    const gridY = Math.floor((y - originY) / cellHeight);
 
     // Calculate distance to nearest edge of artifact
     const distance = this.calculateDistanceToArtifact(gridX, gridY, artifact);

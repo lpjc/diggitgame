@@ -1,3 +1,4 @@
+// Job: Client entry for Type A dig experience; wires engine, tools, UI, and ensures viewport-fit canvas
 import { useEffect, useState, useRef } from 'react';
 import { fetchAPI } from '../shared/utils/api';
 import { DigSiteData } from '../../shared/types/game';
@@ -68,6 +69,11 @@ export const App = () => {
       artifact: digSiteData.artifact,
       canvas,
       ctx,
+      // Placeholder, updated by engine.setupCanvas()
+      cellWidth: 5,
+      cellHeight: 5,
+      originX: 0,
+      originY: 0,
       onArtifactDamage: () => {
         artifactSystem.markDamaged();
         console.log('⚠️ Artifact damaged!');
@@ -84,6 +90,16 @@ export const App = () => {
     toolManager.registerTool(new BrushTool());
 
     engine.setToolManager(toolManager);
+    // Sync initial viewport to tools
+    const vp = engine.getViewport();
+    toolManager.updateContext({
+      cellWidth: vp.cellWidth,
+      cellHeight: vp.cellHeight,
+      originX: vp.originX,
+      originY: vp.originY,
+    });
+
+    // No DOM artifact layer needed now; artifact renders in-canvas
 
     // Set up pointer events
     const handlePointerDown = (e: PointerEvent) => {
@@ -171,11 +187,15 @@ export const App = () => {
 
   return (
     <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full"
-        style={{ touchAction: 'none' }}
-      />
+      <div className="absolute inset-0 flex items-center justify-center p-2">
+        <div className="relative w-full h-full max-w-[100vh] max-h-[100vh] aspect-[9/16]">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full block"
+            style={{ touchAction: 'none' }}
+          />
+        </div>
+      </div>
 
       {gameStarted && <ToolDock activeTool={activeTool} onToolSelect={handleToolSelect} />}
 

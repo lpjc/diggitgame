@@ -1,3 +1,4 @@
+// Job: Define the tool contracts and shared context passed to tools (grid, canvas, helpers)
 import { DirtLayer, ArtifactData } from '../../../../shared/types/game';
 
 export interface ToolContext {
@@ -5,6 +6,12 @@ export interface ToolContext {
   artifact: ArtifactData;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
+  // Dynamic cell size in CSS pixels for non-square grids
+  cellWidth: number;
+  cellHeight: number;
+  // Top-left origin of the dig area inside the canvas (CSS px)
+  originX: number;
+  originY: number;
   onArtifactDamage?: () => void;
   onArtifactBreak?: () => void;
 }

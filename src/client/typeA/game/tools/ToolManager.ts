@@ -1,3 +1,4 @@
+// Job: Manage tool lifecycle and forward input events with dynamic context
 import { Tool, ToolContext } from './Tool';
 
 export class ToolManager {

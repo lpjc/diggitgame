@@ -4,7 +4,7 @@ export class ShovelTool implements Tool {
   name: 'shovel' = 'shovel';
   
   private lastDigTime: number = 0;
-  private cooldown: number = 500; // 500ms cooldown
+  private cooldown: number = 250; // faster cadence for better feel
   private artifactHitLocations: Set<string> = new Set();
 
   onActivate(_context: ToolContext): void {
@@ -34,39 +34,38 @@ export class ShovelTool implements Tool {
 
   private dig(x: number, y: number, context: ToolContext): void {
     const { dirtLayer, artifact, onArtifactDamage, onArtifactBreak } = context;
+    const { cellWidth, cellHeight, originX, originY } = context;
     
     // Convert screen coordinates to grid coordinates
-    const cellSize = 5;
-    const gridX = Math.floor(x / cellSize);
-    const gridY = Math.floor(y / cellSize);
+    const gridX = Math.floor((x - originX) / cellWidth);
+    const gridY = Math.floor((y - originY) / cellHeight);
 
     // Dig parameters
     const digDepth = 10;
-    const digRadius = 15; // pixels
+    // Scale shovel radius with pixel size; base ~2 squares
+    const digRadius = Math.max(12, Math.floor(Math.min(cellWidth, cellHeight) * 2));
 
     let hitArtifact = false;
     const hitLocation = `${gridX},${gridY}`;
 
-    // Remove dirt in circular area
-    for (let dy = -digRadius; dy <= digRadius; dy++) {
-      for (let dx = -digRadius; dx <= digRadius; dx++) {
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance <= digRadius) {
-          const targetX = gridX + Math.floor(dx / cellSize);
-          const targetY = gridY + Math.floor(dy / cellSize);
-
+    // Remove dirt in circular area (grid space to avoid duplicate hits per cell)
+    const gridStep = Math.min(cellWidth, cellHeight);
+    const gridRadius = Math.max(1, Math.round(digRadius / gridStep));
+    for (let ty = -gridRadius; ty <= gridRadius; ty++) {
+      for (let tx = -gridRadius; tx <= gridRadius; tx++) {
+        const distGrid = Math.sqrt(tx * tx + ty * ty);
+        if (distGrid <= gridRadius) {
+          const targetX = gridX + tx;
+          const targetY = gridY + ty;
           if (
             targetX >= 0 &&
             targetX < dirtLayer.width &&
             targetY >= 0 &&
             targetY < dirtLayer.height
           ) {
-            // Check if we're hitting the artifact
             if (this.isArtifactCell(targetX, targetY, artifact)) {
               hitArtifact = true;
             }
-
-            // Remove dirt
             dirtLayer.cells[targetY][targetX] = Math.max(
               0,
               dirtLayer.cells[targetY][targetX] - digDepth
@@ -83,6 +82,7 @@ export class ShovelTool implements Tool {
         if (onArtifactBreak) {
           onArtifactBreak();
         }
+        console.log('SHOVEL HIT ARTIFACT! (break)');
       } else {
         // First hit - show warning
         this.artifactHitLocations.add(hitLocation);
@@ -90,11 +90,13 @@ export class ShovelTool implements Tool {
           onArtifactDamage();
         }
         this.showCrackWarning(x, y, context);
+        console.log('SHOVEL HIT ARTIFACT! (damage)');
       }
     }
 
     // Visual feedback
-    this.showDigEffect(x, y, context);
+    this.showDigEffect(x, y, context, digRadius);
+    console.log('SHOVEL HIT!');
   }
 
   private isArtifactCell(
@@ -102,23 +104,28 @@ export class ShovelTool implements Tool {
     y: number,
     artifact: { position: { x: number; y: number }; width: number; height: number; depth: number }
   ): boolean {
+    // Match the renderer's circular artifact for hit detection
     const { position, width, height } = artifact;
-    return (
-      x >= position.x &&
-      x < position.x + width &&
-      y >= position.y &&
-      y < position.y + height
-    );
+    const cx = position.x + width / 2;
+    const cy = position.y + height / 2;
+    const radius = Math.min(width, height) / 2;
+    const cellCx = x + 0.5;
+    const cellCy = y + 0.5;
+    const dx = cellCx - cx;
+    const dy = cellCy - cy;
+    return dx * dx + dy * dy <= radius * radius;
   }
 
-  private showDigEffect(x: number, y: number, context: ToolContext): void {
+  private showDigEffect(x: number, y: number, context: ToolContext, radiusPx: number): void {
     const { ctx } = context;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(139, 115, 85, 0.5)';
+    // Hard-edged outline only (no soft fill)
+    ctx.strokeStyle = 'rgba(139, 115, 85, 0.9)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x, y, 15, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(x, y, radiusPx, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 

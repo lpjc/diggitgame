@@ -47,24 +47,25 @@ export class BrushTool implements Tool {
   }
 
   private brush(x: number, y: number, context: ToolContext): void {
-    const { dirtLayer } = context;
-    
+    const { dirtLayer, cellWidth, cellHeight, originX, originY } = context;
+
     // Convert screen coordinates to grid coordinates
-    const cellSize = 5;
-    const gridX = Math.floor(x / cellSize);
-    const gridY = Math.floor(y / cellSize);
+    const gridX = Math.floor((x - originX) / cellWidth);
+    const gridY = Math.floor((y - originY) / cellHeight);
 
     // Brush parameters
     const brushDepth = 1; // Gentle removal
-    const brushRadius = 8; // pixels
+    const brushRadiusPx = Math.max(8, Math.floor(Math.min(cellWidth, cellHeight) * 1.25));
 
-    // Remove dirt in circular area
-    for (let dy = -brushRadius; dy <= brushRadius; dy++) {
-      for (let dx = -brushRadius; dx <= brushRadius; dx++) {
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance <= brushRadius) {
-          const targetX = gridX + Math.floor(dx / cellSize);
-          const targetY = gridY + Math.floor(dy / cellSize);
+    // Remove dirt in circular area (grid space)
+    const gridStep = Math.min(cellWidth, cellHeight);
+    const gridRadius = Math.max(1, Math.round(brushRadiusPx / gridStep));
+    for (let ty = -gridRadius; ty <= gridRadius; ty++) {
+      for (let tx = -gridRadius; tx <= gridRadius; tx++) {
+        const distGrid = Math.sqrt(tx * tx + ty * ty);
+        if (distGrid <= gridRadius) {
+          const targetX = gridX + tx;
+          const targetY = gridY + ty;
 
           if (
             targetX >= 0 &&
@@ -75,10 +76,12 @@ export class BrushTool implements Tool {
             const currentDepth = dirtLayer.cells[targetY][targetX];
             if (currentDepth > 0) {
               dirtLayer.cells[targetY][targetX] = Math.max(0, currentDepth - brushDepth);
-              
-              // Create dust particle
+
+              // Create dust particle near the affected cell center
               if (Math.random() < 0.3) {
-                this.createDustParticle(x + dx, y + dy);
+                const cx = originX + (targetX + 0.5) * cellWidth + (Math.random() - 0.5) * cellWidth * 0.6;
+                const cy = originY + (targetY + 0.5) * cellHeight + (Math.random() - 0.5) * cellHeight * 0.6;
+                this.createDustParticle(cx, cy);
               }
             }
           }
