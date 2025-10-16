@@ -38,7 +38,8 @@ export async function createCentralizedArtifact(
     type: 'post' | 'subreddit_relic';
     redditData?: RedditPost;
     relicData?: SubredditRelic;
-  }
+  },
+  firstDiscoveredBy: string
 ): Promise<CentralizedArtifact> {
   const artifact: CentralizedArtifact = {
     artifactId,
@@ -49,6 +50,7 @@ export async function createCentralizedArtifact(
         : artifactData.relicData?.subredditName || 'unknown',
     foundByCount: 0,
     firstDiscoveredAt: Date.now(),
+    firstDiscoveredBy,
   };
 
   if (artifactData.type === 'post' && artifactData.redditData) {

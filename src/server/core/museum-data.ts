@@ -34,16 +34,26 @@ export async function getPlayerMuseum(userId: string): Promise<MuseumData> {
     })
   );
 
-  // Filter out null values
+  // Filter out null values and broken artifacts (broken artifacts shouldn't be in collection)
   const validArtifacts = artifactsWithDetails.filter(
-    (a): a is ArtifactWithPlayerData => a !== null
+    (a): a is ArtifactWithPlayerData => a !== null && !a.isBroken
   );
+
+  // Get broken count from separate counter
+  const { getBrokenCount } = await import('./artifact-discovery');
+  const brokenCount = await getBrokenCount(userId);
+
+  // Calculate first discoveries
+  const firstDiscoveries = validArtifacts.filter(
+    (a) => a.firstDiscoveredBy === userId
+  ).length;
 
   // 3. Calculate summary stats
   const stats = {
-    totalFound: validArtifacts.filter((a) => !a.isBroken).length,
-    totalBroken: validArtifacts.filter((a) => a.isBroken).length,
+    totalFound: validArtifacts.length,
+    totalBroken: brokenCount,
     uniqueSubreddits: new Set(validArtifacts.map((a) => a.subredditOfOrigin)).size,
+    firstDiscoveries,
   };
 
   return {

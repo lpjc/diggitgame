@@ -7,6 +7,7 @@ export interface CentralizedArtifact {
   subredditOfOrigin: string;
   foundByCount: number;
   firstDiscoveredAt: number;
+  firstDiscoveredBy: string; // Username of first discoverer
   redditPost?: RedditPost;
   subredditRelic?: SubredditRelic;
 }
@@ -41,6 +42,7 @@ export interface MuseumData {
     totalFound: number;
     totalBroken: number;
     uniqueSubreddits: number;
+    firstDiscoveries: number;
   };
 }
 
@@ -73,5 +75,6 @@ export interface GetMuseumResponse {
     totalFound: number;
     totalBroken: number;
     uniqueSubreddits: number;
+    firstDiscoveries: number;
   };
 }
