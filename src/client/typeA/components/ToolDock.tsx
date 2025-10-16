@@ -13,25 +13,24 @@ export const ToolDock: React.FC<ToolDockProps> = ({ activeTool, onToolSelect }) 
   ];
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-3 bg-black/70 backdrop-blur-sm rounded-full px-4 py-3 shadow-lg">
+    <div className="fixed bottom-4 right-3 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-xl px-2 py-2 shadow-lg" style={{ pointerEvents: 'auto' }}>
       {tools.map((tool) => (
         <button
           key={tool.id}
           onClick={() => onToolSelect(tool.id)}
           className={`
-            flex flex-col items-center justify-center
-            w-16 h-16 rounded-full
-            transition-all duration-200
+            w-12 h-12 rounded-lg flex items-center justify-center
+            transition-all duration-150
             ${
               activeTool === tool.id
                 ? 'bg-orange-500 scale-110 shadow-lg shadow-orange-500/50'
-                : 'bg-gray-700 hover:bg-gray-600'
+                : 'bg-gray-700/80 active:scale-95'
             }
           `}
           aria-label={tool.label}
+          title={tool.label}
         >
-          <span className="text-2xl">{tool.icon}</span>
-          <span className="text-[10px] text-white mt-1">{tool.label}</span>
+          <span className="text-xl">{tool.icon}</span>
         </button>
       ))}
     </div>

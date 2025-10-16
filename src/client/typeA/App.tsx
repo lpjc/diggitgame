@@ -22,6 +22,7 @@ export const App = () => {
   const [activeTool, setActiveTool] = useState<'detector' | 'shovel' | 'brush' | null>(null);
   const [showDiscovery, setShowDiscovery] = useState(false);
   const [artifactAdded, setArtifactAdded] = useState(false);
+  const [celebration, setCelebration] = useState<{ show: boolean; stage: 'idle'|'pulse'|'linger' }>(() => ({ show: false, stage: 'idle' }));
   
   const gameEngineRef = useRef<GameEngine | null>(null);
   const toolManagerRef = useRef<ToolManager | null>(null);
@@ -62,6 +63,46 @@ export const App = () => {
     (engine as any).dirtMaterials = digSiteData.dirtMaterials;
     (engine as any).borderColor = digSiteData.borderColor;
     engine.setRenderer(renderer);
+
+    // Hook reveal callbacks
+    (engine as any).onReveal70 = () => {
+      // Floating message
+      const ctx2 = ctx;
+      ctx2.save();
+      // Draw transient overlay text for one frame; Tool overlay will still run
+      ctx2.restore();
+      // Use shovel overlay system instead? Simpler here: console + toast-like temporary DOM
+      const toast = document.createElement('div');
+      toast.textContent = "It's beautiful, keep going!";
+      Object.assign(toast.style, {
+        position: 'absolute',
+        left: '50%',
+        top: '12%',
+        transform: 'translateX(-50%)',
+        color: '#FFE69B',
+        fontWeight: '700',
+        fontSize: '18px',
+        textShadow: '0 2px 6px rgba(0,0,0,0.6)',
+        opacity: '0',
+        transition: 'opacity 200ms ease-out',
+        zIndex: '20',
+      } as CSSStyleDeclaration);
+      const container = canvas.parentElement as HTMLElement | null;
+      if (container) {
+        container.appendChild(toast);
+        requestAnimationFrame(() => (toast.style.opacity = '1'));
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 1200);
+        }, 1600);
+      }
+    };
+
+    (engine as any).onReveal95 = () => {
+      setCelebration({ show: true, stage: 'pulse' });
+      // After 1.5s pulse, move to linger
+      setTimeout(() => setCelebration({ show: true, stage: 'linger' }), 1500);
+    };
 
     // Initialize tool manager
     const toolManager = new ToolManager({
@@ -188,6 +229,13 @@ export const App = () => {
 
   return (
     <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
+      <style>{`
+        @keyframes celebration-ring {
+          0% { transform: scale(0.6); opacity: 0.9; }
+          60% { opacity: 0.5; }
+          100% { transform: scale(1.25); opacity: 0; }
+        }
+      `}</style>
       <div className="absolute inset-0 flex items-center justify-center p-2">
         <div className="relative w-full h-full max-w-[100vh] max-h-[100vh] aspect-[9/16]">
           <canvas
@@ -195,6 +243,70 @@ export const App = () => {
             className="w-full h-full block"
             style={{ touchAction: 'none' }}
           />
+
+          {celebration.show && (
+            <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
+              {/* Dim background */}
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.45)' }} />
+              {/* Light rays and pulses */}
+              <div
+                className="relative flex items-center justify-center"
+                style={{ width: '60%', height: '40%', pointerEvents: 'none' }}
+              >
+                <div
+                  className="absolute"
+                  style={{
+                    width: '220px',
+                    height: '220px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,223,119,0.85) 0%, rgba(255,223,119,0.25) 45%, rgba(255,223,119,0) 70%)',
+                    transform: celebration.stage === 'pulse' ? 'scale(1.15)' : 'scale(1)',
+                    transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    filter: 'blur(1px)',
+                  }}
+                />
+                <div
+                  className="absolute"
+                  style={{
+                    width: '260px',
+                    height: '260px',
+                    borderRadius: '50%',
+                    border: '3px solid rgba(255,220,120,0.9)',
+                  animation: 'celebration-ring 1400ms ease-out infinite',
+                  }}
+                />
+                <div
+                  className="relative flex items-center justify-center"
+                  style={{
+                    color: '#FFD700',
+                    fontSize: '48px',
+                    textShadow: '0 3px 10px rgba(0,0,0,0.6)',
+                    transform: celebration.stage === 'pulse' ? 'scale(1.25)' : 'scale(1.0)',
+                    transition: 'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
+                >
+                  {/* Placeholder artifact icon */}
+                  {digSiteData.artifact.type === 'subreddit_relic' ? '🏛️' : '📜'}
+                </div>
+              </div>
+
+              {/* CTA button */}
+              {celebration.stage === 'linger' && (
+                <div className="absolute bottom-[12%] w-full flex justify-center" style={{ pointerEvents: 'auto' }}>
+                  <button
+                    onClick={handleAddToMuseum}
+                    className="px-5 py-3 rounded-lg text-gray-900 font-bold"
+                    style={{
+                      background: 'linear-gradient(180deg, #FFE082 0%, #FFC107 100%)',
+                      boxShadow: '0 6px 18px rgba(255,193,7,0.45), inset 0 2px 0 rgba(255,255,255,0.7)',
+                    }}
+                  >
+                    Add to your Museum
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

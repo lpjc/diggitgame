@@ -7,7 +7,8 @@ import {
   UserActionResponse,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
-import { createPost, createPostA, createPostB } from './core/post';
+import { createPostA, createPostB } from './core/post';
+import { getRecommendedSubreddits } from './core/subreddit-picker';
 import { getDataFeed } from './core/data';
 import { createUserPost, createUserComment } from './core/userActions';
 import { getDigSiteData, getCommunityStats, updateCommunityStats } from './core/digsite';
@@ -529,10 +530,31 @@ router.post('/api/relic/claim', async (req, res): Promise<void> => {
   }
 });
 
+// Get recommended subreddits for the player
+router.get('/api/recommended-subreddits', async (req, res): Promise<void> => {
+  try {
+    const count = parseInt(req.query.count as string) || 5;
+    const weight = parseFloat(req.query.weight as string) || 0.6;
+    
+    const subreddits = await getRecommendedSubreddits(count, weight);
+    
+    res.json({
+      success: true,
+      subreddits,
+    });
+  } catch (error) {
+    console.error('Error getting recommended subreddits:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to get recommendations',
+    });
+  }
+});
+
 router.post('/internal/on-app-install', async (_req, res): Promise<void> => {
   try {
-    // Create a default dig site for AskReddit on install
-    const post = await createPostA('AskReddit');
+    // Create a default dig site with dynamic subreddit selection on install
+    const post = await createPostA();
 
     res.json({
       status: 'success',
@@ -549,8 +571,8 @@ router.post('/internal/on-app-install', async (_req, res): Promise<void> => {
 
 router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
   try {
-    // Default to AskReddit for the legacy menu action
-    const post = await createPostA('AskReddit');
+    // Use dynamic subreddit selection for the legacy menu action
+    const post = await createPostA();
 
     res.json({
       navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
@@ -566,8 +588,8 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
 
 router.post('/internal/menu/create-post-a', async (req, res): Promise<void> => {
   try {
-    // Allow specifying target subreddit, default to popular ones
-    const targetSubreddit = (req.body as any)?.targetSubreddit || 'AskReddit';
+    // Allow specifying target subreddit, or use dynamic selection
+    const targetSubreddit = (req.body as any)?.targetSubreddit;
     const post = await createPostA(targetSubreddit);
 
     res.json({

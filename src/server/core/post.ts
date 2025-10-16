@@ -1,12 +1,32 @@
 import { context, reddit, redis } from '@devvit/web/server';
+import { getRandomSubreddit } from './subreddit-picker';
 
-export const createPostA = async (targetSubreddit: string = 'AskReddit') => {
+export const createPostA = async (targetSubreddit?: string) => {
+  // If no target subreddit provided, pick one dynamically
+  if (!targetSubreddit) {
+    targetSubreddit = await getRandomSubreddit(0.6); // 60% weight to user's known subreddits
+  }
   const { subredditName } = context;
   if (!subredditName) {
     throw new Error('subredditName is required');
   }
 
   console.log(`Creating PostA with target subreddit: r/${targetSubreddit}`);
+
+  // Fetch subreddit icon
+  let appIconUri = 'default-icon.png';
+  try {
+    const subredditInfo = await reddit.getSubredditInfoByName(targetSubreddit);
+    if (subredditInfo.id) {
+      const styles = await reddit.getSubredditStyles(subredditInfo.id);
+      if (styles.icon) {
+        appIconUri = styles.icon;
+        console.log(`Using subreddit icon: ${appIconUri}`);
+      }
+    }
+  } catch (error) {
+    console.warn(`Failed to fetch icon for r/${targetSubreddit}, using default:`, error);
+  }
 
   // Initialize stats
   const tempPostId = `temp_${Date.now()}`;
@@ -26,7 +46,7 @@ export const createPostA = async (targetSubreddit: string = 'AskReddit') => {
       description: `Excavate historical posts from this subreddit\n\n✅ Found: 0  💔 Broken: 0`,
       buttonLabel: 'Start Digging ⛏️',
       backgroundUri: 'default-splash.png',
-      appIconUri: 'default-icon.png',
+      appIconUri,
     },
     postData: {
       postType: 'typeA',

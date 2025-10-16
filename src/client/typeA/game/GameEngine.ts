@@ -21,6 +21,7 @@ export class GameEngine {
   private gridInitialized: boolean = false;
   private readonly pixelSizeCss: number = 16; // Big square pixel size in CSS px
   private hasLoggedSeventy: boolean = false;
+  private hasTriggeredNinetyFive: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -278,6 +279,15 @@ export class GameEngine {
     if (!this.hasLoggedSeventy && this.state.uncoveredPercentage >= 70) {
       console.log('Artifact 70% revealed');
       this.hasLoggedSeventy = true;
+      const onReveal70 = (this as any).onReveal70 as (() => void) | undefined;
+      if (onReveal70) onReveal70();
+    }
+
+    // Trigger celebration at 95%
+    if (!this.hasTriggeredNinetyFive && this.state.uncoveredPercentage >= 95) {
+      this.hasTriggeredNinetyFive = true;
+      const onReveal95 = (this as any).onReveal95 as (() => void) | undefined;
+      if (onReveal95) onReveal95();
     }
   }
 
