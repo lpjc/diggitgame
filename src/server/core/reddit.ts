@@ -51,6 +51,7 @@ export async function fetchHistoricalPost(subredditName: string): Promise<Reddit
       subreddit: subredditName,
       createdAt: randomPost!.createdAt.getTime(),
       score: randomPost!.score,
+      ...(typeof (randomPost as any).numComments === 'number' && { commentCount: (randomPost as any).numComments }),
       ...(thumbnailUrl && { thumbnailUrl }),
       ...(textSnippet && { textSnippet }),
       permalink: randomPost!.permalink,

@@ -1,7 +1,13 @@
+// Job: Compact Reddit-like post card for a collected artifact, with no thumbnails.
+// - Shows subreddit icon (if available), subreddit name, title, score, and quick stats.
+// - Used in large grid views; clicking opens detail overlay in parent.
+// - Image thumbnails are intentionally omitted per design.
+
 import React from 'react';
-import { ArtifactWithPlayerData, RarityTier } from '../../../shared/types/artifact';
-import { RarityBadge, SubredditBadge, FirstDiscoveryBadge } from './Badges';
-import { calculateBRRDate, formatNumber } from '../utils/dateCalculator';
+import { ArtifactWithPlayerData } from '../../../shared/types/artifact';
+// Note: Badges are NOT shown on the card itself (they live on plaques)
+// Keeping imports local to avoid unused imports
+import { formatNumber } from '../utils/dateCalculator';
 
 interface ArtifactCardProps {
   artifact: ArtifactWithPlayerData;
@@ -9,73 +15,69 @@ interface ArtifactCardProps {
   isFirstDiscovery: boolean;
 }
 
-function getRarityTier(foundByCount: number): RarityTier {
-  if (foundByCount === 1) return 'unique';
-  if (foundByCount < 5) return 'ultra_rare';
-  if (foundByCount <= 20) return 'rare';
-  if (foundByCount <= 100) return 'uncommon';
-  return 'common';
-}
+// Rarity is not used on the card (shown on plaques); helper removed for clarity
 
 export const ArtifactCard: React.FC<ArtifactCardProps> = ({
   artifact,
   onClick,
-  isFirstDiscovery,
 }) => {
-  const [imageError, setImageError] = React.useState(false);
-  const hasImage = artifact.type === 'post' && artifact.redditPost?.thumbnailUrl;
-  const rarityTier = getRarityTier(artifact.foundByCount);
-  const brrDate = calculateBRRDate(artifact.redditPost?.createdAt || artifact.firstDiscoveredAt);
+
+  // Prefer subreddit icon from relic data; fallback to local Snoo icon
+  const subredditIconUrl =
+    artifact.subredditRelic?.iconUrl || '/snoo.png';
+
+  const titleText =
+    artifact.type === 'post'
+      ? artifact.redditPost?.title || 'Untitled'
+      : `r/${artifact.subredditRelic?.subredditName ?? artifact.subredditOfOrigin}`;
 
   return (
     <div
-      className="flex-shrink-0 w-48 h-full bg-white rounded border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden relative"
+      className="flex w-[180px] max-w-[180px] flex-col gap-1.5 rounded-[10px] bg-white p-2 font-['Inter',_sans-serif] shadow hover:shadow-lg cursor-pointer"
+      style={{ fontFeatureSettings: 'normal' }}
       onClick={onClick}
     >
-      {/* Badges */}
-      <div className="absolute top-1 right-1 z-10 flex flex-col gap-1">
-        <RarityBadge tier={rarityTier} />
-        {isFirstDiscovery && <FirstDiscoveryBadge />}
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <div className="relative w-8 h-8 shrink-0 overflow-hidden rounded-full bg-gray-100">
+          <img alt={`r/${artifact.subredditOfOrigin}`} className="absolute inset-0 w-full h-full object-cover" src={subredditIconUrl} />
+        </div>
+        <div className="flex flex-col items-start leading-none">
+          <span className="text-[10px] leading-4 font-semibold text-[#5C6C74]">r/{artifact.subredditOfOrigin}</span>
+          {/* Badges removed on card per design (appear on shelf plaque) */}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex flex-col h-full">
-        {/* Image or placeholder */}
-        {hasImage ? (
-          imageError ? (
-            <div className="w-full h-24 bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">🏺</span>
-            </div>
-          ) : (
-            <img
-              src={artifact.redditPost!.thumbnailUrl}
-              alt=""
-              className="w-full h-24 object-cover flex-shrink-0"
-              loading="lazy"
-              onError={() => setImageError(true)}
-            />
-          )
-        ) : (
-          <div className="w-full h-24 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl">📄</span>
-          </div>
-        )}
+      {/* Title */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[12px] leading-5 font-bold break-words whitespace-pre-wrap text-[#11151A] line-clamp-2">
+          {titleText}
+        </span>
 
-        {/* Info */}
-        <div className="p-2 flex-1 flex flex-col justify-between">
-          <h3 className="text-xs font-semibold line-clamp-2 mb-1">
-            {artifact.redditPost?.title || 'Untitled'}
-          </h3>
-
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <SubredditBadge subreddit={artifact.subredditOfOrigin} />
+        {/* Footer actions */}
+        <div className="flex justify-between items-center gap-2 text-[#5C6C74]">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <img src="/icon/for-cards/upvote-icon-orange.png" className="w-4 h-4" />
+              <span className="text-[10px] font-semibold">{formatNumber(artifact.redditPost?.score || 0)}</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>⬆️ {formatNumber(artifact.redditPost?.score || 0)}</span>
-              <span>{brrDate}</span>
+            <div className="flex items-center gap-1">
+              <img src="/icon/for-cards/comment-icon-orange.png" className="w-4 h-4" />
+              <span className="text-[10px] font-semibold">{formatNumber(artifact.redditPost?.commentCount || 0)}</span>
             </div>
           </div>
+          {artifact.redditPost?.permalink && (
+            <a
+              href={`https://reddit.com${artifact.redditPost.permalink}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >     
+              {/* Open in new window icon */}
+              <img src="/icon/for-cards/open-new-icon-grey.png" className="w-4 h-4" />
+            </a>
+          )}
         </div>
       </div>
     </div>

@@ -1,11 +1,21 @@
+// Job: Responsive grid of Reddit-like artifact post cards (no thumbnails).
+// - Renders many collected posts in a dense grid using `ArtifactCard`.
+// - Emits `onArtifactClick` to open a detail overlay in the parent.
+
 import { ArtifactWithPlayerData } from '../../../shared/types/artifact';
-import { ArtifactTile } from './ArtifactTile';
+import { ArtifactCard } from './ArtifactCard';
 
 interface ArtifactGridProps {
   artifacts: ArtifactWithPlayerData[];
+  onArtifactClick: (artifact: ArtifactWithPlayerData) => void;
+  currentUserId: string;
 }
 
-export const ArtifactGrid: React.FC<ArtifactGridProps> = ({ artifacts }) => {
+export const ArtifactGrid: React.FC<ArtifactGridProps> = ({
+  artifacts,
+  onArtifactClick,
+  currentUserId,
+}) => {
   if (artifacts.length === 0) {
     return (
       <div className="text-center py-16">
@@ -19,15 +29,13 @@ export const ArtifactGrid: React.FC<ArtifactGridProps> = ({ artifacts }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 p-2">
       {artifacts.map((artifact) => (
-        <ArtifactTile
+        <ArtifactCard
           key={artifact.artifactId}
           artifact={artifact}
-          onClick={() => {
-            // TODO: Show artifact details modal
-            console.log('Artifact clicked:', artifact);
-          }}
+          onClick={() => onArtifactClick(artifact)}
+          isFirstDiscovery={artifact.firstDiscoveredBy === currentUserId}
         />
       ))}
     </div>

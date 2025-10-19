@@ -19,14 +19,14 @@ export const ControlBanner: React.FC<ControlBannerProps> = ({
   onAutoScrollToggle,
 }) => {
   return (
-    <div className="sticky top-[36px] z-40 bg-white/95 backdrop-blur-sm shadow border-b border-gray-200">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-[0_-4px_12px_rgba(0,0,0,0.1)] border-t border-gray-200">
       <div className="px-2 py-2">
         {/* Stats Row - Compact */}
         <div className="flex justify-center gap-3 mb-2 text-xs">
-          <StatBadge icon="✅" value={stats.totalFound} label="Found" />
-          <StatBadge icon="🗺️" value={stats.uniqueSubreddits} label="Subs" />
-          <StatBadge icon="⭐" value={stats.firstDiscoveries} label="First" />
-          <StatBadge icon="💔" value={stats.totalBroken} label="Broken" />
+          <StatBadge icon="Found" value={stats.totalFound} label="Found" />
+          <StatBadge icon="Subs" value={stats.uniqueSubreddits} label="Subs" />
+          <StatBadge icon="First" value={stats.firstDiscoveries} label="First" />
+          <StatBadge icon="Broken" value={stats.totalBroken} label="Broken" />
         </div>
 
         {/* Controls Row - Compact */}
@@ -34,25 +34,25 @@ export const ControlBanner: React.FC<ControlBannerProps> = ({
           <SortButton
             active={sortBy === 'date'}
             onClick={() => onSortChange('date')}
-            icon="📅"
+            icon="Date"
             label="Date"
           />
           <SortButton
             active={sortBy === 'rarity'}
             onClick={() => onSortChange('rarity')}
-            icon="💎"
+            icon="Rarity"
             label="Rarity"
           />
           <SortButton
             active={sortBy === 'subreddit'}
             onClick={() => onSortChange('subreddit')}
-            icon="📂"
+            icon="Sub"
             label="Sub"
           />
           <ToggleButton
             active={autoScroll}
             onClick={onAutoScrollToggle}
-            icon="🔄"
+            icon="Scroll"
             label="Scroll"
           />
         </div>

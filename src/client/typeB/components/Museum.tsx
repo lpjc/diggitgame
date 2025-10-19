@@ -82,7 +82,7 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
         onAutoScrollToggle={() => setAutoScroll(!autoScroll)}
       />
 
-      {/* Artifact Grid - 3 rows, horizontal scroll */}
+      {/* Shelves - three horizontal scrollable rows */}
       <ArtifactMasonryGrid
         artifacts={museumData.artifacts}
         onArtifactClick={setSelectedArtifact}

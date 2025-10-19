@@ -38,17 +38,21 @@ export const createPostA = async (targetSubreddit?: string) => {
     })
   );
 
+  // Randomly select one of the available digsite backgrounds
+  const backgroundOptions = ['desert-digsite.png', 'jungle-digsite.png', 'mountain-digsite.png'];
+  const backgroundUri = backgroundOptions[Math.floor(Math.random() * backgroundOptions.length)];
+
   const post = (await reddit.submitCustomPost({
     entrypoint: 'typeA',
     splash: {
-      appDisplayName: 'Subreddit Excavator',
-      heading: `🏜️ Dig Site: r/${targetSubreddit}`,
-      description: `Excavate historical posts from this subreddit\n\n✅ Found: 0  💔 Broken: 0`,
-      buttonLabel: 'Start Digging ⛏️',
-      backgroundUri: 'default-splash.png',
+      appDisplayName: 'Diggit',
+      heading: `r/${targetSubreddit} \n Dig Site Discovered! `,
+      description: `\n \u26B1\uFE0E Artifacts found here: 0 \n ☓\uFE0E Broken by a shovel: 0`,
+      buttonLabel: '⛏\uFE0E Excavate!',
+      backgroundUri,
       appIconUri,
     },
-    postData: {
+    postData: { 
       postType: 'typeA',
       targetSubreddit,
       initialState: {
@@ -57,7 +61,7 @@ export const createPostA = async (targetSubreddit?: string) => {
       },
     },
     subredditName: subredditName,
-    title: `🏜️ Dig Site: r/${targetSubreddit}`,
+    title: `Dig Site: r/${targetSubreddit}`,
   } as any)) as any;
   console.log('PostA created:', post.id);
 

@@ -1,5 +1,7 @@
+// Job: Grid view for broken artifacts using the new Reddit-like card.
+// - Uses `ArtifactCard` for consistency but shows broken styling via strikethrough in detail (kept minimal here).
 import { ArtifactWithPlayerData } from '../../../shared/types/artifact';
-import { ArtifactTile } from './ArtifactTile';
+import { ArtifactCard } from './ArtifactCard';
 
 interface BrokenArtifactsViewProps {
   artifacts: ArtifactWithPlayerData[];
@@ -27,15 +29,13 @@ export const BrokenArtifactsView: React.FC<BrokenArtifactsViewProps> = ({ artifa
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
         {artifacts.map((artifact) => (
-          <ArtifactTile
+          <ArtifactCard
             key={artifact.artifactId}
             artifact={artifact}
-            onClick={() => {
-              // TODO: Show artifact details modal
-              console.log('Broken artifact clicked:', artifact);
-            }}
+            onClick={() => console.log('Broken artifact clicked:', artifact)}
+            isFirstDiscovery={false}
           />
         ))}
       </div>

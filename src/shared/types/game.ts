@@ -30,6 +30,8 @@ export type RedditPost = {
   subreddit: string;
   createdAt: number;
   score: number;
+  // Total number of comments at time of capture
+  commentCount?: number;
   thumbnailUrl?: string | undefined;
   textSnippet?: string | undefined;
   permalink: string;
