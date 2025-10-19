@@ -86,17 +86,18 @@ export const createPostB = async (userId?: string) => {
   }
 
   const username = userId || (await reddit.getCurrentUsername()) || 'anonymous';
+  const snoovatarUrl = username ? await reddit.getSnoovatarUrl(username) : 'museum-icon.png';
 
   console.log(`Creating PostB (Museum) for user: ${username}`);
   const post = (await reddit.submitCustomPost({
     entrypoint: 'typeB',
     splash: {
-      appDisplayName: 'Artifact Museum',
-      heading: `🏛️ ${username}'s Museum`,
-      description: `View your collection of discovered artifacts\n\n✅ Found: 0  💔 Broken: 0`,
-      buttonLabel: 'Enter Museum 🏛️',
-      backgroundUri: 'default-splash.png',
-      appIconUri: 'default-icon.png',
+      appDisplayName: `The u/${username} Collection`,
+      heading: `u/${username}'s Museum`,
+      description: `Your collection of discovered artifacts\n\n \u26B1\uFE0E Found in total: 0`,
+      buttonLabel: 'Enter Museum',
+      backgroundUri: 'museum-post-background.png',
+      appIconUri: snoovatarUrl,
     },
     postData: {
       postType: 'typeB',
@@ -107,7 +108,7 @@ export const createPostB = async (userId?: string) => {
       },
     },
     subredditName: subredditName,
-    title: `🏛️ ${username}'s Artifact Museum`,
+    title: `${username}'s Artifact Museum`,
   } as any)) as any;
   console.log('PostB created:', post.id);
 
