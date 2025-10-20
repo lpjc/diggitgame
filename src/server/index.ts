@@ -365,8 +365,22 @@ router.post('/api/stats/update', async (req, res): Promise<void> => {
       return;
     }
 
-    // Update community stats
+    // Update community stats (Redis)
     const communityStats = await updateCommunityStats(postId, action);
+    
+    // Also update postData with latest community stats
+    try {
+      const post = await reddit.getPostById(postId);
+      const existing = (context.postId === postId && (context.postData as any)) || {};
+      await post.setPostData({
+        ...existing,
+        communityStats,
+        lastUpdatedAt: Date.now(),
+      });
+    } catch (pdErr) {
+      console.warn('Failed to update postData for stats:', pdErr);
+      // non-fatal
+    }
     
     // Update player stats
     const userId = username || 'anonymous';
@@ -385,6 +399,49 @@ router.post('/api/stats/update', async (req, res): Promise<void> => {
     res.status(500).json({
       status: 'error',
       message: error instanceof Error ? error.message : 'Failed to update stats',
+    });
+  }
+});
+
+// Update viewer info on a post (e.g., Type B splash shows current viewing user)
+router.post('/api/postdata/update-viewer', async (req, res): Promise<void> => {
+  try {
+    const { postId } = req.body as { postId?: string };
+    const viewingUser = (await reddit.getCurrentUsername()) || 'anonymous';
+
+    if (!postId) {
+      res.status(400).json({ status: 'error', message: 'postId is required' });
+      return;
+    }
+
+    // Pull viewer totals from museum service
+    const { getPlayerMuseum } = await import('./core/museum-data');
+    const museum = await getPlayerMuseum(viewingUser);
+
+    // Update postData
+    const post = await reddit.getPostById(postId);
+    const existing = (context.postId === postId && (context.postData as any)) || {} as any;
+
+    await post.setPostData({
+      ...existing,
+      viewingUser,
+      viewingTotals: {
+        totalFound: museum.stats.totalFound,
+        totalBroken: museum.stats.totalBroken,
+      },
+      lastUpdatedAt: Date.now(),
+    });
+
+    res.json({
+      success: true,
+      viewingUser,
+      viewingTotals: museum.stats,
+    });
+  } catch (error) {
+    console.error('Error updating viewer postData:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to update viewer postData',
     });
   }
 });

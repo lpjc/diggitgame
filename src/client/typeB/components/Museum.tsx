@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react';
+// Job: Screen-level container for the Museum view. Fetches museum data and
+// renders overlays: a top-center username banner and a bottom-right floating
+// controls menu. Applies client-side sorting (field + direction) and passes the
+// sorted artifacts to the masonry grid.
+import { useEffect, useMemo, useState } from 'react';
 import { fetchAPI } from '../../shared/utils/api';
 import { GetMuseumResponse, ArtifactWithPlayerData } from '../../../shared/types/artifact';
 import { CollectionHeader } from './CollectionHeader';
@@ -13,10 +17,12 @@ interface MuseumProps {
 export const Museum: React.FC<MuseumProps> = ({ userId }) => {
   const [museumData, setMuseumData] = useState<GetMuseumResponse | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'rarity' | 'subreddit'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [autoScroll, setAutoScroll] = useState(false);
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactWithPlayerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showGiftToast, setShowGiftToast] = useState(false);
 
   useEffect(() => {
     fetchMuseumData();
@@ -37,6 +43,25 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
       setLoading(false);
     }
   }
+
+  // Sorting helper and memoized sorted artifacts. Must be declared before any
+  // conditional returns to respect the Rules of Hooks (consistent hook order).
+  function sortArtifactsLocal(
+    artifacts: ArtifactWithPlayerData[],
+    key: 'date' | 'rarity' | 'subreddit',
+    dir: 'asc' | 'desc'
+  ): ArtifactWithPlayerData[] {
+    const sign = dir === 'asc' ? 1 : -1;
+    const arr = [...artifacts];
+    if (key === 'date') return arr.sort((a, b) => sign * (a.collectedAt - b.collectedAt));
+    if (key === 'rarity') return arr.sort((a, b) => sign * (a.foundByCount - b.foundByCount));
+    return arr.sort((a, b) => sign * a.subredditOfOrigin.localeCompare(b.subredditOfOrigin));
+  }
+
+  const sortedArtifacts = useMemo(() => {
+    const base = museumData?.artifacts ?? [];
+    return sortArtifactsLocal(base, sortBy, sortDir);
+  }, [museumData, sortBy, sortDir]);
 
   if (loading) {
     return (
@@ -69,22 +94,34 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
   if (!museumData) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 to-blue-50">
-      {/* Header */}
-      <CollectionHeader username={userId} />
+    <div className="h-screen relative flex flex-col">
+      {/* Top-center banner overlay */}
+      <div className="pointer-events-none fixed top-2 left-1/2 -translate-x-1/2 z-50">
+        <div className="pointer-events-auto">
+          <CollectionHeader username={userId} />
+        </div>
+      </div>
 
-      {/* Control Banner */}
-      <ControlBanner
-        stats={museumData.stats}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        autoScroll={autoScroll}
-        onAutoScrollToggle={() => setAutoScroll(!autoScroll)}
-      />
+      {/* Floating bottom-right controls */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <ControlBanner
+          stats={museumData.stats}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSortChange={setSortBy}
+          onSortDirChange={setSortDir}
+          autoScroll={autoScroll}
+          onAutoScrollToggle={() => setAutoScroll(!autoScroll)}
+          onGiftShop={() => {
+            setShowGiftToast(true);
+            window.setTimeout(() => setShowGiftToast(false), 2200);
+          }}
+        />
+      </div>
 
-      {/* Shelves - three horizontal scrollable rows */}
+      {/* Shelves - three horizontal scrollable rows (background applied on the grid container) */}
       <ArtifactMasonryGrid
-        artifacts={museumData.artifacts}
+        artifacts={sortedArtifacts}
         onArtifactClick={setSelectedArtifact}
         currentUserId={userId}
       />
@@ -96,6 +133,15 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
           isFirstDiscovery={selectedArtifact.firstDiscoveredBy === userId}
           onClose={() => setSelectedArtifact(null)}
         />
+      )}
+
+      {/* Gift shop toast */}
+      {showGiftToast && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[60]">
+          <div className="px-3 py-2 rounded-lg bg-black/80 text-white text-xs shadow-lg">
+            Gift Shop: Planned feature pending game dev funding
+          </div>
+        </div>
       )}
     </div>
   );

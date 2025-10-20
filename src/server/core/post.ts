@@ -55,10 +55,15 @@ export const createPostA = async (targetSubreddit?: string) => {
     postData: { 
       postType: 'typeA',
       targetSubreddit,
+      communityStats: {
+        artifactsFound: 0,
+        artifactsBroken: 0,
+      },
       initialState: {
         gameState: 'initial',
         score: 0,
       },
+      lastUpdatedAt: Date.now(),
     },
     subredditName: subredditName,
     title: `Dig Site: r/${targetSubreddit}`,
@@ -101,11 +106,17 @@ export const createPostB = async (userId?: string) => {
     },
     postData: {
       postType: 'typeB',
-      userId: username,
+      creatorUserId: username,
+      viewingUser: null,
+      viewingTotals: {
+        totalFound: 0,
+        totalBroken: 0,
+      },
       initialState: {
         gameState: 'initial',
         score: 0,
       },
+      lastUpdatedAt: Date.now(),
     },
     subredditName: subredditName,
     title: `${username}'s Artifact Museum`,

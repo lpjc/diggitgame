@@ -1,4 +1,10 @@
 
-[ ] Make museum UI better.
+[ ] Make museum UI better. (The Artifacts cards are good, but the rest looks rough.  )
 [ ] Add a "Gift Shop" tap
-[ ] Create the full flow of discovering a new dig subredditName
+[ ] Create the full flow of discovering a new dig subredditName 
+    (eachpost hasve X amount of treasure maps, so like a treasure maps discovred in this dig site x/X)
+[ ] Users will have a "dig site discovered" stat as well on dispaly in museum - visualized by a trophy 
+[ ] Flair, users shuld get a custom flair assigned based on their performance. (how many artifacts they have, like Prospecting Prospect for 0-20, Certified Sand Sifter for 20-100 and then Chief Excavating Officer for 100+, )
+[ ] Finding artifact UI needs rework
+[ ] Breaking artifact need rework (and dont reveal what the artifact was, like...)
+[ ] make a "You already played this level" message for players who played the level already. 

@@ -1,6 +1,8 @@
-// Job: Three horizontal shelves of artifacts with thick bottom borders (shelf look),
-// horizontally scrollable only. Each artifact shows a small front "plaque" with age
-// and rarity emblem matching the shelf tone.
+// Job: Three horizontal shelves of artifacts rendered over a repeating museum
+// background image applied to the horizontally scrolling container itself so it
+// repeats with scroll. The background comes from `/inside-museum.png`, fits the
+// container height, and repeats horizontally as you scroll. Each artifact shows
+// a small front "plaque" with age and rarity emblem.
 
 import { useState, useEffect, useRef } from 'react';
 import { ArtifactWithPlayerData, RarityTier } from '../../../shared/types/artifact';
@@ -75,12 +77,11 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
 
   const ShelfRow: React.FC<{ items: ArtifactWithPlayerData[]; shelfTone: 'amber-700' | 'amber-600' | 'amber-800' }>
     = ({ items, shelfTone }) => {
-    // Tailwind can't interpolate arbitrary class names safely without safelist, so map tones
-    const borderClass = shelfTone === 'amber-700' ? 'border-amber-700' : shelfTone === 'amber-600' ? 'border-amber-600' : 'border-amber-800';
+    // Map tones for the plaque color only (shelf borders removed; background image provides shelves)
     const plaqueBgClass = shelfTone === 'amber-700' ? 'bg-amber-700' : shelfTone === 'amber-600' ? 'bg-amber-600' : 'bg-amber-800';
 
     return (
-      <div className={`flex gap-4 h-1/3 items-end pb-0 border-b-8 ${borderClass}`}>
+      <div className={`flex gap-4 h-1/3 items-end pb-0`}>
         {items.map((artifact) => {
           const actualAge = calculateActualAge(
             artifact.redditPost?.createdAt || artifact.firstDiscoveredAt
@@ -111,7 +112,14 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
 
   return (
     <div
-      className="flex-1 overflow-x-auto overflow-y-hidden touch-pan-x select-none bg-[#2a1f1a]"
+      className="flex-1 overflow-x-auto overflow-y-hidden touch-pan-x select-none"
+      style={{
+        backgroundImage: "url('/inside-museum.png')",
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: 'auto 100%',
+        backgroundPosition: '0 0',
+        backgroundAttachment: 'scroll',
+      }}
       onMouseDown={(e) => {
         const container = e.currentTarget as HTMLDivElement;
         const startX = e.pageX - container.offsetLeft;
@@ -133,10 +141,14 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
       }}
       onTouchStart={(e) => {
         const container = e.currentTarget as HTMLDivElement;
-        const startX = e.touches[0].pageX - container.offsetLeft;
+        const firstTouch = e.touches.item(0);
+        if (!firstTouch) return;
+        const startX = firstTouch.pageX - container.offsetLeft;
         const startLeft = container.scrollLeft;
         const onMove = (ev: TouchEvent) => {
-          const x = ev.touches[0].pageX - container.offsetLeft;
+          const movingTouch = ev.touches.item(0);
+          if (!movingTouch) return;
+          const x = movingTouch.pageX - container.offsetLeft;
           const walk = (x - startX) * 1;
           container.scrollLeft = startLeft - walk;
         };
@@ -150,7 +162,9 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
         window.addEventListener('touchcancel', onEnd);
       }}
     >
-      <div className="flex flex-col gap-2 p-2 h-full">
+      <div
+        className="flex flex-col gap-2 p-2 h-full"
+      >
         {/* Shelf 1 */}
         <ShelfRow items={row1} shelfTone="amber-700" />
         {row1.length > 0 && <div ref={loadMoreRef} className="w-4 h-0" />}

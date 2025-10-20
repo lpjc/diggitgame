@@ -221,6 +221,19 @@ export const App = () => {
       
       console.log(`Artifact saved! Rarity: ${response.rarityTier}, Found by ${response.foundByCount} players`);
       setArtifactAdded(true);
+
+      // Update community and player stats, and mirror to postData
+      try {
+        await fetchAPI('/api/stats/update', {
+          method: 'POST',
+          body: JSON.stringify({
+            postId: digSiteData.postId,
+            action: artifactSystemRef.current.isBrokenState() ? 'broken' : 'found',
+          }),
+        });
+      } catch (e) {
+        console.warn('Stats update failed:', e);
+      }
     } catch (error) {
       console.error('Failed to add artifact to museum:', error);
     }

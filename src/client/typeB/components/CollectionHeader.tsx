@@ -1,15 +1,15 @@
+// Job: Compact floating banner that shows the username collection title.
+// Designed to be placed in a fixed overlay at the top-center by the parent.
 interface CollectionHeaderProps {
   username: string;
 }
 
 export const CollectionHeader: React.FC<CollectionHeaderProps> = ({ username }) => {
   return (
-    <div className="sticky top-0 z-50 bg-gradient-to-r from-amber-50 to-orange-50 border-b-2 border-amber-600 shadow">
-      <div className="max-w-full px-2 py-2">
-        <h1 className="text-lg font-bold text-center text-amber-900">
-          The u/{username} Collection
-        </h1>
-      </div>
+    <div className="rounded-full px-4 py-2 bg-white/85 backdrop-blur border border-amber-600 shadow-lg">
+      <h1 className="text-sm font-bold text-amber-900">
+        The u/{username} Collection
+      </h1>
     </div>
   );
 };

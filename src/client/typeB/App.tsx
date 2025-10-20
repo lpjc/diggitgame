@@ -13,6 +13,11 @@ export const App = () => {
       try {
         const initData = await fetchAPI<InitResponse>('/api/init');
         setUserId(initData.username || 'anonymous');
+        // Update postData viewer info (current viewing user + their totals)
+        await fetchAPI('/api/postdata/update-viewer', {
+          method: 'POST',
+          body: JSON.stringify({ postId: initData.postId }),
+        });
       } catch (error) {
         console.error('Failed to fetch init data:', error);
         setUserId('anonymous');
