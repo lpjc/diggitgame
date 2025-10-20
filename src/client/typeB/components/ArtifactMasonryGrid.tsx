@@ -5,10 +5,8 @@
 // a small front "plaque" with age and rarity emblem.
 
 import { useState, useEffect, useRef } from 'react';
-import { ArtifactWithPlayerData, RarityTier } from '../../../shared/types/artifact';
+import { ArtifactWithPlayerData } from '../../../shared/types/artifact';
 import { ArtifactCard } from './ArtifactCard';
-import { RarityBadge } from './Badges';
-import { calculateActualAge } from '../utils/dateCalculator';
 
 interface ArtifactMasonryGridProps {
   artifacts: ArtifactWithPlayerData[];
@@ -67,26 +65,16 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
     else row3.push(artifact);
   });
 
-  function getRarityTier(foundByCount: number): RarityTier {
-    if (foundByCount === 1) return 'unique';
-    if (foundByCount < 5) return 'ultra_rare';
-    if (foundByCount <= 20) return 'rare';
-    if (foundByCount <= 100) return 'uncommon';
-    return 'common';
-  }
+  // Rarity tier helper removed from UI usage (kept out to avoid dead code warnings)
 
   const ShelfRow: React.FC<{ items: ArtifactWithPlayerData[]; shelfTone: 'amber-700' | 'amber-600' | 'amber-800' }>
-    = ({ items, shelfTone }) => {
-    // Map tones for the plaque color only (shelf borders removed; background image provides shelves)
-    const plaqueBgClass = shelfTone === 'amber-700' ? 'bg-amber-700' : shelfTone === 'amber-600' ? 'bg-amber-600' : 'bg-amber-800';
+    = ({ items }) => {
+    // Plaque removed; no per-row tones currently applied
 
     return (
-      <div className={`flex gap-4 h-1/3 items-end pb-0`}>
+      <div className={`flex gap-4 h-1/3 items-end pb-[3%]`}>
         {items.map((artifact) => {
-          const actualAge = calculateActualAge(
-            artifact.redditPost?.createdAt || artifact.firstDiscoveredAt
-          );
-          const rarityTier = getRarityTier(artifact.foundByCount);
+          // Age and rarity no longer displayed here (handled inside card)
           return (
             <div key={artifact.artifactId} className="relative">
               <div className="mb-2">
@@ -96,11 +84,7 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
                   isFirstDiscovery={artifact.firstDiscoveredBy === currentUserId}
                 />
               </div>
-              {/* Plaque */}
-              <div className={`absolute left-1/2 -translate-x-1/2 translate-y-1/2 bottom-0 ${plaqueBgClass} text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow flex items-center gap-1 z-10`}>
-                <RarityBadge tier={rarityTier} />
-                <span>{actualAge}</span>
-              </div>
+              {/* Plaque removed – age now displayed inside the card itself */}
             </div>
           );
         })}
@@ -163,7 +147,8 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
       }}
     >
       <div
-        className="flex flex-col gap-2 p-2 h-full"
+        className="flex flex-col gap-2 p-2"
+        style={{ height: '80%' }}
       >
         {/* Shelf 1 */}
         <ShelfRow items={row1} shelfTone="amber-700" />

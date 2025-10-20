@@ -1,5 +1,5 @@
 // Job: Compact Reddit-like post card for a collected artifact, with no thumbnails.
-// - Shows subreddit icon (if available), subreddit name, title, score, and quick stats.
+// - Shows Month Year (age) above subreddit, subreddit icon/name, title, score, and quick stats.
 // - Used in large grid views; clicking opens detail overlay in parent.
 // - Image thumbnails are intentionally omitted per design.
 
@@ -31,6 +31,15 @@ export const ArtifactCard: React.FC<ArtifactCardProps> = ({
       ? artifact.redditPost?.title || 'Untitled'
       : `r/${artifact.subredditRelic?.subredditName ?? artifact.subredditOfOrigin}`;
 
+  // Month Year label (e.g., June 2021) computed from createdAt or firstDiscoveredAt
+  const monthYear = (() => {
+    const ts = artifact.redditPost?.createdAt || artifact.firstDiscoveredAt;
+    if (!ts) return '';
+    const d = new Date(ts);
+    // Use built-in locale to avoid extra deps; enforce long month
+    return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  })();
+
   return (
     <div
       className="flex w-[180px] max-w-[180px] flex-col gap-1.5 rounded-[10px] bg-white p-2 font-['Inter',_sans-serif] shadow hover:shadow-lg cursor-pointer"
@@ -43,6 +52,9 @@ export const ArtifactCard: React.FC<ArtifactCardProps> = ({
           <img alt={`r/${artifact.subredditOfOrigin}`} className="absolute inset-0 w-full h-full object-cover" src={subredditIconUrl} />
         </div>
         <div className="flex flex-col items-start leading-none">
+          {monthYear && (
+            <span className="text-[10px] leading-4 font-semibold text-[#34424A]">{monthYear}</span>
+          )}
           <span className="text-[10px] leading-4 font-semibold text-[#5C6C74]">r/{artifact.subredditOfOrigin}</span>
           {/* Badges removed on card per design (appear on shelf plaque) */}
         </div>
