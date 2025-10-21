@@ -13,33 +13,33 @@ graph TB
     subgraph "Museum App (TypeB)"
         App[App.tsx]
         Museum[Museum.tsx]
-        
+
         subgraph "Layout Components"
             Header[CollectionHeader]
             Controls[ControlBanner]
             Background[ScrollingBackground]
         end
-        
+
         subgraph "Grid Components"
             Grid[ArtifactMasonryGrid]
             Tile[ArtifactCard]
         end
-        
+
         subgraph "Overlay Components"
             Overlay[ArtifactDetailOverlay]
         end
     end
-    
+
     subgraph "Server API"
         MuseumAPI[GET /api/museum/:userId]
         ArtifactAPI[GET /api/artifact/:artifactId]
     end
-    
+
     subgraph "Utilities"
         DateCalc[BRR/ARR Date Calculator]
         LazyLoad[Lazy Loading Manager]
     end
-    
+
     App --> Museum
     Museum --> Header
     Museum --> Controls
@@ -47,7 +47,7 @@ graph TB
     Museum --> Grid
     Grid --> Tile
     Tile --> Overlay
-    
+
     Museum --> MuseumAPI
     Overlay --> ArtifactAPI
     Tile --> DateCalc
@@ -72,6 +72,7 @@ graph TB
 **Location:** `src/client/typeB/components/CollectionHeader.tsx`
 
 **Props:**
+
 ```typescript
 interface CollectionHeaderProps {
   username: string;
@@ -79,6 +80,7 @@ interface CollectionHeaderProps {
 ```
 
 **Implementation:**
+
 ```typescript
 export const CollectionHeader: React.FC<CollectionHeaderProps> = ({ username }) => {
   return (
@@ -96,7 +98,6 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({ username }) 
 };
 ```
 
-
 ### 2. Control Banner (Sticky)
 
 **Purpose:** Provide sorting controls, statistics, and auto-scroll toggle
@@ -104,6 +105,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({ username }) 
 **Location:** `src/client/typeB/components/ControlBanner.tsx`
 
 **Props:**
+
 ```typescript
 interface ControlBannerProps {
   stats: {
@@ -120,6 +122,7 @@ interface ControlBannerProps {
 ```
 
 **Implementation:**
+
 ```typescript
 export const ControlBanner: React.FC<ControlBannerProps> = ({
   stats,
@@ -138,7 +141,7 @@ export const ControlBanner: React.FC<ControlBannerProps> = ({
           <StatBadge icon="⭐" value={stats.firstDiscoveries} label="First Discoveries" />
           <StatBadge icon="💔" value={stats.totalBroken} label="Broken" />
         </div>
-        
+
         {/* Controls Row */}
         <div className="flex justify-center gap-2">
           <SortButton
@@ -180,6 +183,7 @@ export const ControlBanner: React.FC<ControlBannerProps> = ({
 **Location:** `src/client/typeB/components/ScrollingBackground.tsx`
 
 **Props:**
+
 ```typescript
 interface ScrollingBackgroundProps {
   artifacts: ArtifactWithPlayerData[];
@@ -188,6 +192,7 @@ interface ScrollingBackgroundProps {
 ```
 
 **Implementation:**
+
 ```typescript
 export const ScrollingBackground: React.FC<ScrollingBackgroundProps> = ({
   artifacts,
@@ -248,7 +253,6 @@ const BackgroundThumbnail: React.FC<{ artifact: ArtifactWithPlayerData }> = ({ a
 };
 ```
 
-
 ### 4. Artifact Masonry Grid
 
 **Purpose:** Display artifacts in a compact masonry layout with lazy loading
@@ -256,6 +260,7 @@ const BackgroundThumbnail: React.FC<{ artifact: ArtifactWithPlayerData }> = ({ a
 **Location:** `src/client/typeB/components/ArtifactMasonryGrid.tsx`
 
 **Props:**
+
 ```typescript
 interface ArtifactMasonryGridProps {
   artifacts: ArtifactWithPlayerData[];
@@ -265,6 +270,7 @@ interface ArtifactMasonryGridProps {
 ```
 
 **Implementation:**
+
 ```typescript
 export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
   artifacts,
@@ -319,6 +325,7 @@ export const ArtifactMasonryGrid: React.FC<ArtifactMasonryGridProps> = ({
 **Location:** `src/client/typeB/components/ArtifactCard.tsx`
 
 **Props:**
+
 ```typescript
 interface ArtifactCardProps {
   artifact: ArtifactWithPlayerData;
@@ -328,6 +335,7 @@ interface ArtifactCardProps {
 ```
 
 **Implementation:**
+
 ```typescript
 export const ArtifactCard: React.FC<ArtifactCardProps> = ({
   artifact,
@@ -416,7 +424,6 @@ const PostMetadata: React.FC<{ score: number; numComments: number; date: string 
 };
 ```
 
-
 ### 6. Badge Components
 
 **Purpose:** Display pinned badges for rarity, subreddit, and first discovery
@@ -424,6 +431,7 @@ const PostMetadata: React.FC<{ score: number; numComments: number; date: string 
 **Location:** `src/client/typeB/components/Badges.tsx`
 
 **Implementation:**
+
 ```typescript
 export const RarityBadge: React.FC<{ tier: RarityTier }> = ({ tier }) => {
   const config = {
@@ -467,6 +475,7 @@ export const FirstDiscoveryBadge: React.FC = () => {
 **Location:** `src/client/typeB/components/ArtifactDetailOverlay.tsx`
 
 **Props:**
+
 ```typescript
 interface ArtifactDetailOverlayProps {
   artifact: ArtifactWithPlayerData;
@@ -476,6 +485,7 @@ interface ArtifactDetailOverlayProps {
 ```
 
 **Implementation:**
+
 ```typescript
 export const ArtifactDetailOverlay: React.FC<ArtifactDetailOverlayProps> = ({
   artifact,
@@ -576,7 +586,6 @@ const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value
 };
 ```
 
-
 ### 8. BRR/ARR Date Calculator
 
 **Purpose:** Calculate dates relative to Reddit Redesign (April 1, 2018)
@@ -584,6 +593,7 @@ const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value
 **Location:** `src/client/typeB/utils/dateCalculator.ts`
 
 **Implementation:**
+
 ```typescript
 const REDDIT_REDESIGN_DATE = new Date('2018-04-01').getTime();
 
@@ -595,10 +605,10 @@ const REDDIT_REDESIGN_DATE = new Date('2018-04-01').getTime();
 export function calculateBRRDate(timestamp: number): string {
   const diffMs = Math.abs(timestamp - REDDIT_REDESIGN_DATE);
   const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
-  
+
   const wholeYears = Math.floor(diffYears);
   const fraction = diffYears - wholeYears;
-  
+
   let fractionSymbol = '';
   if (fraction >= 0.75) {
     fractionSymbol = '¾';
@@ -607,10 +617,10 @@ export function calculateBRRDate(timestamp: number): string {
   } else if (fraction >= 0.25) {
     fractionSymbol = '¼';
   }
-  
+
   const yearString = wholeYears === 0 ? fractionSymbol : `${wholeYears}${fractionSymbol}`;
   const era = timestamp < REDDIT_REDESIGN_DATE ? 'BRR' : 'ARR';
-  
+
   return `${yearString} ${era}`.trim();
 }
 
@@ -622,14 +632,16 @@ export function calculateBRRDate(timestamp: number): string {
 export function calculateActualAge(timestamp: number): string {
   const now = Date.now();
   const diffMs = now - timestamp;
-  
+
   const years = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 365.25));
-  const months = Math.floor((diffMs % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.44));
-  
+  const months = Math.floor(
+    (diffMs % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.44)
+  );
+
   if (years === 0) {
     return `${months} month${months !== 1 ? 's' : ''} old`;
   }
-  
+
   return `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''} old`;
 }
 
@@ -654,6 +666,7 @@ export function formatNumber(num: number): string {
 **Location:** `src/client/typeB/components/Museum.tsx`
 
 **Implementation:**
+
 ```typescript
 export const Museum: React.FC<{ userId: string }> = ({ userId }) => {
   const [museumData, setMuseumData] = useState<GetMuseumResponse | null>(null);
@@ -768,7 +781,6 @@ export interface MuseumStats {
 }
 ```
 
-
 ## API Changes
 
 ### Update Artifact Creation
@@ -832,9 +844,7 @@ async function getPlayerMuseum(userId: string): Promise<MuseumData> {
   const validArtifacts = artifactsWithDetails.filter((a) => !a.isBroken);
 
   // Calculate stats including first discoveries
-  const firstDiscoveries = validArtifacts.filter(
-    (a) => a.firstDiscoveredBy === userId
-  ).length;
+  const firstDiscoveries = validArtifacts.filter((a) => a.firstDiscoveredBy === userId).length;
 
   const stats = {
     totalFound: validArtifacts.length,
@@ -969,7 +979,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 
   const loadMore = useCallback(() => {
     if (isLoading || visibleCount >= total) return;
-    
+
     setIsLoading(true);
     setTimeout(() => {
       setVisibleCount((prev) => Math.min(prev + increment, total));
@@ -986,6 +996,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 ### Unit Tests
 
 **Date Calculator:**
+
 - Test BRR dates (before April 1, 2018)
 - Test ARR dates (after April 1, 2018)
 - Test fractional notation (¼, ½, ¾)
@@ -993,6 +1004,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 - Test actual age calculation
 
 **Rarity Calculation:**
+
 - Test unique (foundByCount = 1)
 - Test ultra rare (foundByCount < 5)
 - Test rare (5-20)
@@ -1000,6 +1012,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 - Test common (>100)
 
 **Number Formatting:**
+
 - Test K suffix (1000+)
 - Test M suffix (1000000+)
 - Test small numbers
@@ -1007,18 +1020,21 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 ### Component Tests
 
 **ArtifactCard:**
+
 - Test image post rendering (2x2 grid)
 - Test text post rendering (1x2 grid)
 - Test badge display (rarity, subreddit, first discovery)
 - Test click handler
 
 **ScrollingBackground:**
+
 - Test auto-scroll enabled
 - Test auto-scroll disabled
 - Test seamless loop
 - Test lazy loading
 
 **ControlBanner:**
+
 - Test sort button clicks
 - Test auto-scroll toggle
 - Test stats display
@@ -1026,6 +1042,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 ### Integration Tests
 
 **Museum Flow:**
+
 - Test loading museum data
 - Test sorting by date/rarity/subreddit
 - Test clicking artifact opens overlay
@@ -1036,16 +1053,17 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 ### Performance Tests
 
 **Lazy Loading:**
+
 - Test initial load (20 artifacts)
 - Test loading more on scroll
 - Test with 100+ artifacts
 - Measure render time
 
 **Auto-Scroll:**
+
 - Test smooth scrolling
 - Test performance with 50+ thumbnails
 - Test memory usage over time
-
 
 ## Technical Decisions and Rationales
 
@@ -1054,6 +1072,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Use CSS Grid with variable row/column spans
 
 **Rationale:**
+
 - Flexible layout that adapts to content
 - Image posts (2x2) stand out visually
 - Text posts (1x2) are compact but readable
@@ -1065,6 +1084,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Use CSS `position: sticky` for header and controls
 
 **Rationale:**
+
 - Native browser support, no JS required
 - Smooth scrolling performance
 - Always accessible controls
@@ -1076,6 +1096,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Use Intersection Observer API for lazy loading
 
 **Rationale:**
+
 - Native browser API, highly performant
 - Automatically detects when to load more
 - Better than scroll event listeners
@@ -1087,6 +1108,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Calculate dates relative to April 1, 2018 with fractional notation
 
 **Rationale:**
+
 - Fun, thematic way to show post age
 - Creates unique identity for the museum
 - Fractional notation (¼, ½, ¾) is readable
@@ -1098,6 +1120,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Use absolute positioning for badges on cards
 
 **Rationale:**
+
 - Doesn't disrupt card layout
 - Always visible regardless of content
 - Easy to identify rarity at a glance
@@ -1109,6 +1132,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Make background auto-scroll optional with toggle
 
 **Rationale:**
+
 - Some users may find auto-scroll distracting
 - Gives users control over their experience
 - Slow scroll speed when enabled
@@ -1120,6 +1144,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Don't add broken artifacts to collection, only count them
 
 **Rationale:**
+
 - Broken artifacts are a failure state
 - Players shouldn't be rewarded for breaking artifacts
 - Keeps museum focused on successes
@@ -1131,6 +1156,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Record username of first discoverer in artifact record
 
 **Rationale:**
+
 - Creates sense of achievement
 - Encourages exploration of less-popular subreddits
 - Provides social proof
@@ -1142,6 +1168,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Mimic Reddit's post layout (title, score, comments, date)
 
 **Rationale:**
+
 - Familiar to Reddit users
 - Provides context for artifacts
 - Shows post popularity (score)
@@ -1153,6 +1180,7 @@ const useLazyLoad = (initialCount: number, increment: number, total: number) => 
 **Decision:** Display semi-transparent scrolling grid of thumbnails
 
 **Rationale:**
+
 - Showcases entire collection
 - Creates dynamic, engaging atmosphere
 - Doesn't distract from main content (semi-transparent)
@@ -1297,4 +1325,3 @@ const observerOptions = {
 3. **Prefetching** - Preload next batch of artifacts
 4. **Service Worker** - Offline support and caching
 5. **WebP Images** - Use modern image formats for smaller sizes
-

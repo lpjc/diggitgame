@@ -115,7 +115,6 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
         {/* Floating top-right controls */}
         <div className="fixed top-4 right-4 z-50">
           <ControlBanner
-            stats={museumData.stats}
             sortBy={sortBy}
             sortDir={sortDir}
             onSortChange={setSortBy}
@@ -143,7 +142,7 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
           
           {/* Collection Header - positioned to overlap the avatar */}
           <div className="pointer-events-auto -ml-8 mt-4 z-40">
-            <CollectionHeader username={userId} />
+            <CollectionHeader username={userId} stats={museumData.stats} />
           </div>
         </div>
 
@@ -181,7 +180,6 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
       {/* Floating top-right controls */}
       <div className="fixed top-4 right-4 z-50">
         <ControlBanner
-          stats={museumData.stats}
           sortBy={sortBy}
           sortDir={sortDir}
           onSortChange={setSortBy}
@@ -209,7 +207,7 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
         
         {/* Collection Header - positioned to overlap the avatar */}
         <div className="pointer-events-auto -ml-8 mt-4 z-20">
-          <CollectionHeader username={userId} />
+          <CollectionHeader username={userId} stats={museumData.stats} />
         </div>
       </div>
 

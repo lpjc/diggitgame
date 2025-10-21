@@ -1,15 +1,8 @@
-// Job: Floating bottom-right mini menu with left-expanding dropdowns for
-// sorting (field + direction), stats view, and a Gift Shop button that triggers
-// a toast handled by the parent. Designed as an overlay; compact and touch
-// friendly.
+// Job: Floating bottom-right mini menu with left-expanding dropdown for sorting
+// (field + direction) and a Gift Shop button that triggers a toast handled by
+// the parent. Designed as an overlay; compact and touch friendly.
 import { useEffect, useRef, useState } from 'react';
 interface ControlBannerProps {
-  stats: {
-    totalFound: number;
-    uniqueSubreddits: number;
-    firstDiscoveries: number;
-    totalBroken: number;
-  };
   sortBy: 'date' | 'rarity' | 'subreddit';
   sortDir: 'asc' | 'desc';
   onSortChange: (sort: 'date' | 'rarity' | 'subreddit') => void;
@@ -20,7 +13,6 @@ interface ControlBannerProps {
 }
 
 export const ControlBanner: React.FC<ControlBannerProps> = ({
-  stats,
   sortBy,
   sortDir,
   onSortChange,
@@ -38,7 +30,6 @@ export const ControlBanner: React.FC<ControlBannerProps> = ({
           sortDir={sortDir}
           onSortChange={onSortChange}
           onSortDirChange={onSortDirChange}
-          stats={stats}
           autoScroll={autoScroll}
           onAutoScrollToggle={onAutoScrollToggle}
           onGiftShop={onGiftShop}
@@ -48,15 +39,7 @@ export const ControlBanner: React.FC<ControlBannerProps> = ({
   );
 };
 
-const StatBadge: React.FC<{ icon: string; value: number; label: string }> = ({ icon, value, label }) => (
-  <div className="flex items-center gap-1">
-    <span className="text-sm">{icon}</span>
-    <div>
-      <span className="font-bold text-gray-800">{value}</span>
-      <span className="text-gray-600 ml-1">{label}</span>
-    </div>
-  </div>
-);
+// (Stats UI moved to `CollectionHeader`)
 
 const SortButton: React.FC<{
   active: boolean;
@@ -100,12 +83,11 @@ const LeftExpandingMenu: React.FC<{
   sortDir: 'asc' | 'desc';
   onSortChange: (s: 'date' | 'rarity' | 'subreddit') => void;
   onSortDirChange: (d: 'asc' | 'desc') => void;
-  stats: { totalFound: number; uniqueSubreddits: number; firstDiscoveries: number; totalBroken: number };
   autoScroll: boolean;
   onAutoScrollToggle: () => void;
   onGiftShop: () => void;
-}> = ({ sortBy, sortDir, onSortChange, onSortDirChange, stats, onGiftShop }) => {
-  const [open, setOpen] = useState<'none' | 'sort' | 'stats'>('none');
+}> = ({ sortBy, sortDir, onSortChange, onSortDirChange, onGiftShop }) => {
+  const [open, setOpen] = useState<'none' | 'sort'>('none');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -166,29 +148,6 @@ const LeftExpandingMenu: React.FC<{
             );
           })}
         </div>
-        )}
-      </div>
-
-      {/* Stats menu */}
-      <div className="relative">
-        <button
-          className={`${menuBase}`}
-          aria-haspopup="menu"
-          aria-expanded={open === 'stats'}
-          onClick={() => setOpen((s) => (s === 'stats' ? 'none' : 'stats'))}
-          title="Stats"
-        >
-          📈
-        </button>
-        {open === 'stats' && (
-          <div className={panelBase}>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <StatBadge icon="🏺" value={stats.totalFound} label="Found" />
-              <StatBadge icon="r/" value={stats.uniqueSubreddits} label="Subs" />
-              <StatBadge icon="✨" value={stats.firstDiscoveries} label="First" />
-              <StatBadge icon="🗑️" value={stats.totalBroken} label="Broken" />
-            </div>
-          </div>
         )}
       </div>
 

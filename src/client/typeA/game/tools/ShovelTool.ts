@@ -2,13 +2,15 @@ import { Tool, ToolContext } from './Tool';
 
 export class ShovelTool implements Tool {
   name: 'shovel' = 'shovel';
-  
+
   private lastDigTime: number = 0;
   private cooldown: number = 250; // faster cadence for better feel
   private artifactHits: number = 0; // shared lives across the entire artifact
-  private impactParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
+  private impactParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number }> =
+    [];
   private ring?: { x: number; y: number; radius: number; life: number };
-  private floatingTexts: Array<{ x: number; y: number; text: string; life: number; vy: number }> = [];
+  private floatingTexts: Array<{ x: number; y: number; text: string; life: number; vy: number }> =
+    [];
   private redParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
   private artifactFlashCells: Array<{ x: number; y: number; life: number }> = [];
 
@@ -53,7 +55,7 @@ export class ShovelTool implements Tool {
 
   handlePointerDown(x: number, y: number, context: ToolContext): void {
     const now = Date.now();
-    
+
     // Check cooldown
     if (now - this.lastDigTime < this.cooldown) {
       return;
@@ -66,7 +68,7 @@ export class ShovelTool implements Tool {
   private dig(x: number, y: number, context: ToolContext): void {
     const { dirtLayer, artifact, onArtifactDamage, onArtifactBreak } = context;
     const { cellWidth, cellHeight, originX, originY } = context;
-    
+
     // Convert screen coordinates to grid coordinates
     const gridX = Math.floor((x - originX) / cellWidth);
     const gridY = Math.floor((y - originY) / cellHeight);
@@ -165,7 +167,13 @@ export class ShovelTool implements Tool {
     return dx * dx + dy * dy <= radius * radius;
   }
 
-  private showRing(ctx: CanvasRenderingContext2D, x: number, y: number, radiusPx: number, life: number): void {
+  private showRing(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    radiusPx: number,
+    life: number
+  ): void {
     ctx.save();
     const alpha = Math.max(0, Math.min(1, life / 180));
     ctx.strokeStyle = `rgba(139, 115, 85, ${0.8 * alpha})`;
@@ -309,7 +317,7 @@ export class ShovelTool implements Tool {
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
     ctx.lineWidth = 3;
-    
+
     // Draw crack lines
     ctx.beginPath();
     ctx.moveTo(x - 10, y - 10);
@@ -317,7 +325,7 @@ export class ShovelTool implements Tool {
     ctx.moveTo(x + 10, y - 10);
     ctx.lineTo(x - 10, y + 10);
     ctx.stroke();
-    
+
     ctx.restore();
   }
 }
