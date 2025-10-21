@@ -130,6 +130,24 @@ router.get('/api/data-feed', async (_req, res): Promise<void> => {
   }
 });
 
+// Current user Snoovatar
+router.get('/api/me/snoovatar', async (_req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    const snoovatarUrl = username ? await reddit.getSnoovatarUrl(username) : undefined;
+    res.json({
+      username: username || 'anonymous',
+      snoovatarUrl: snoovatarUrl || null,
+    });
+  } catch (error) {
+    console.error('Error fetching snoovatar:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to fetch snoovatar',
+    });
+  }
+});
+
 router.post<unknown, UserActionResponse, UserActionRequest>(
   '/api/create-user-post',
   async (req, res): Promise<void> => {
@@ -419,7 +437,7 @@ router.post('/api/postdata/update-viewer', async (req, res): Promise<void> => {
     const museum = await getPlayerMuseum(viewingUser);
 
     // Update postData
-    const post = await reddit.getPostById(postId);
+    const post = await reddit.getPostById(postId as any);
     const existing = (context.postId === postId && (context.postData as any)) || {} as any;
 
     await post.setPostData({

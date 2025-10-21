@@ -23,10 +23,25 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showGiftToast, setShowGiftToast] = useState(false);
+  const [snoovatarUrl, setSnoovatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMuseumData();
   }, [userId, sortBy]);
+
+  // Fetch current user's Snoovatar once
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await fetchAPI<{ username: string; snoovatarUrl: string | null }>(
+          '/api/me/snoovatar'
+        );
+        setSnoovatarUrl(result.snoovatarUrl);
+      } catch (e) {
+        // Non-fatal; leave as null
+      }
+    })();
+  }, []);
 
   async function fetchMuseumData() {
     try {
@@ -93,17 +108,78 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
 
   if (!museumData) return null;
 
+  // Empty museum state
+  if (museumData.artifacts.length === 0) {
+    return (
+      <div className="h-screen relative flex flex-col bg-gradient-to-br from-purple-50 to-blue-50">
+        {/* Floating top-right controls */}
+        <div className="fixed top-4 right-4 z-50">
+          <ControlBanner
+            stats={museumData.stats}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSortChange={setSortBy}
+            onSortDirChange={setSortDir}
+            autoScroll={autoScroll}
+            onAutoScrollToggle={() => setAutoScroll(!autoScroll)}
+            onGiftShop={() => {
+              setShowGiftToast(true);
+              window.setTimeout(() => setShowGiftToast(false), 2200);
+            }}
+          />
+        </div>
+
+        {/* Bottom-left grouped overlay: Snoovatar + Collection Header */}
+        <div className="fixed bottom-4 left-1 z-50 flex items-center">
+          {/* Snoovatar */}
+          <div style={{ height: '30vh', width: 'auto' }}>
+            <img
+              src={snoovatarUrl || 'https://i.redd.it/snoovatar/avatars/5a27568f-6463-41c7-a719-272bd9bd29e3.png'}
+              alt="Snoovatar"
+              className="h-full object-cover"
+              style={{ width: 'auto', maxWidth: '100%' }}
+            />
+          </div>
+          
+          {/* Collection Header - positioned to overlap the avatar */}
+          <div className="pointer-events-auto -ml-8 mt-4 z-40">
+            <CollectionHeader username={userId} />
+          </div>
+        </div>
+
+        {/* Empty museum content */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-6">
+            <div className="text-6xl mb-4">🏺</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Your museum is empty</h2>
+            <p className="text-gray-600 mb-6">Go find a dig site to start collecting artifacts!</p>
+            <a
+              href="https://www.reddit.com/r/diggitgame_dev/new/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-lg"
+            >
+              Find Dig Site
+            </a>
+          </div>
+        </div>
+
+        {/* Gift shop toast */}
+        {showGiftToast && (
+          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[60]">
+            <div className="px-3 py-2 rounded-lg bg-black/80 text-white text-xs shadow-lg">
+              Gift Shop: Planned feature pending game dev funding
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen relative flex flex-col">
-      {/* Top-center banner overlay */}
-      <div className="pointer-events-none fixed top-2 left-1/2 -translate-x-1/2 z-50">
-        <div className="pointer-events-auto">
-          <CollectionHeader username={userId} />
-        </div>
-      </div>
-
-      {/* Floating bottom-right controls */}
-      <div className="fixed bottom-4 right-4 z-50">
+      {/* Floating top-right controls */}
+      <div className="fixed top-4 right-4 z-50">
         <ControlBanner
           stats={museumData.stats}
           sortBy={sortBy}
@@ -117,6 +193,24 @@ export const Museum: React.FC<MuseumProps> = ({ userId }) => {
             window.setTimeout(() => setShowGiftToast(false), 2200);
           }}
         />
+      </div>
+
+      {/* Bottom-left grouped overlay: Snoovatar + Collection Header */}
+      <div className="fixed bottom-4 left-[-8px] flex items-center z-30">
+        {/* Snoovatar */}
+        <div className="z-50" style={{ height: '30vh', width: 'auto'}}>
+          <img
+            src={snoovatarUrl || 'https://i.redd.it/snoovatar/avatars/5a27568f-6463-41c7-a719-272bd9bd29e3.png'}
+            alt="Snoovatar"
+            className="h-full object-cover z-50"
+            style={{ width: 'auto', maxWidth: '100%' }}
+          />
+        </div>
+        
+        {/* Collection Header - positioned to overlap the avatar */}
+        <div className="pointer-events-auto -ml-8 mt-4 z-20">
+          <CollectionHeader username={userId} />
+        </div>
       </div>
 
       {/* Shelves - three horizontal scrollable rows (background applied on the grid container) */}

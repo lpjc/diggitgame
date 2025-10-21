@@ -19,3 +19,7 @@
 :root {
   --color-reddit: #FF4500;
 }
+
+body {
+  background: #eee;
+}
