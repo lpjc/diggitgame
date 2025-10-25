@@ -40,7 +40,7 @@ export class DetectorTool implements Tool {
   }
 
   private ping(x: number, y: number, context: ToolContext): void {
-    const { artifact } = context;
+    const { artifact, trashItems } = context;
     const { cellWidth, cellHeight, originX, originY } = context;
     
     // Convert screen coordinates to grid coordinates
@@ -49,8 +49,15 @@ export class DetectorTool implements Tool {
     const gridX = Math.floor(gridXF);
     const gridY = Math.floor(gridYF);
 
-    // Calculate distance to circular artifact boundary in grid cells
-    const distance = this.calculateDistanceToArtifactCircle(gridX, gridY, artifact);
+    // Calculate distance to nearest circular item (artifact or any trash) boundary in grid cells
+    const distances: number[] = [];
+    distances.push(this.calculateDistanceToArtifactCircle(gridX, gridY, artifact));
+    if (Array.isArray(trashItems)) {
+      for (const t of trashItems) {
+        distances.push(this.calculateDistanceToArtifactCircle(gridX, gridY, t as any));
+      }
+    }
+    const distance = Math.min(...distances);
     // Debug: log distances and mapping
     const cx = artifact.position.x + artifact.width / 2;
     const cy = artifact.position.y + artifact.height / 2;

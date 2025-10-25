@@ -54,6 +54,15 @@ export type ArtifactData = {
   relic?: SubredditRelic;
 };
 
+// Trash items buried in the dig layer. Same reveal mechanics as artifacts,
+// but rendered in gray and have no metadata.
+export type TrashItem = {
+  position: { x: number; y: number };
+  depth: number;
+  width: number;
+  height: number;
+};
+
 export type CollectedArtifact = {
   id: string;
   type: ArtifactType;
@@ -103,6 +112,7 @@ export type GameState = {
   phase: GamePhase;
   dirtLayer: DirtLayer;
   artifact: ArtifactData;
+  trashItems: TrashItem[];
   uncoveredPercentage: number;
   isDamaged: boolean;
   isBroken: boolean;

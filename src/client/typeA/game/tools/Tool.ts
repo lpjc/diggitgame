@@ -1,9 +1,10 @@
 // Job: Define the tool contracts and shared context passed to tools (grid, canvas, helpers)
-import { DirtLayer, ArtifactData } from '../../../../shared/types/game';
+import { DirtLayer, ArtifactData, TrashItem } from '../../../../shared/types/game';
 
 export interface ToolContext {
   dirtLayer: DirtLayer;
   artifact: ArtifactData;
+  trashItems: TrashItem[];
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   // Dynamic cell size in CSS pixels for non-square grids

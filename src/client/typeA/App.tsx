@@ -108,6 +108,7 @@ export const App = () => {
     const toolManager = new ToolManager({
       dirtLayer: engine.getState().dirtLayer,
       artifact: engine.getState().artifact,
+      trashItems: engine.getState().trashItems,
       canvas,
       ctx,
       // Placeholder, updated by engine.setupCanvas()
@@ -139,6 +140,7 @@ export const App = () => {
       originX: vp.originX,
       originY: vp.originY,
       artifact: engine.getState().artifact,
+      trashItems: engine.getState().trashItems,
     });
 
     // No DOM artifact layer needed now; artifact renders in-canvas

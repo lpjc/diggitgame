@@ -1,5 +1,5 @@
 // Job: Render the dig scene using dynamic cell sizes and a portrait dig area that fits viewport
-import { DirtLayer, BiomeType, DirtMaterial, ArtifactData } from '../../../shared/types/game';
+import { DirtLayer, BiomeType, DirtMaterial, ArtifactData, TrashItem } from '../../../shared/types/game';
 
 export class DigSceneRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -37,6 +37,7 @@ export class DigSceneRenderer {
     biome: BiomeType,
     dirtMaterials: DirtMaterial[],
     borderColor: string,
+    trashItems: TrashItem[] = [],
     artifact?: ArtifactData,
     uncoveredPercentage?: number,
     viewport?: { cellWidth: number; cellHeight: number; originX: number; originY: number; digWidthPx: number; digHeightPx: number }
@@ -53,9 +54,14 @@ export class DigSceneRenderer {
     // 3) Draw overlay details bound to cell sizes
     this.renderPebbles(dirtLayer, viewport);
     
-    // Reveal artifact per-cell as a golden circle only where depth is reached
+    // Reveal trash (gray) and artifact (gold). Order: trash first, then artifact to give artifact priority if overlapping
+    if (trashItems && trashItems.length > 0) {
+      for (const t of trashItems) {
+        this.renderCircularReveal(dirtLayer, t, '#B0B0B0', 'rgba(90, 90, 90, 0.25)', viewport);
+      }
+    }
     if (artifact) {
-      this.renderArtifactRevealedCellsGolden(dirtLayer, artifact, viewport);
+      this.renderCircularReveal(dirtLayer, artifact, '#FFD700', 'rgba(180, 140, 0, 0.25)', viewport);
     }
     
     this.renderBorder(biome, borderColor, viewport);
@@ -263,12 +269,14 @@ export class DigSceneRenderer {
     }
   }
 
-  private renderArtifactRevealedCellsGolden(
+  private renderCircularReveal(
     dirtLayer: DirtLayer,
-    artifact: ArtifactData,
+    item: { position: { x: number; y: number }; width: number; height: number; depth: number },
+    fillColor: string,
+    strokeColor: string,
     viewport?: { originX: number; originY: number }
   ): void {
-    const { position, width, height, depth } = artifact;
+    const { position, width, height, depth } = item;
     const originX = viewport?.originX ?? 0;
     const originY = viewport?.originY ?? 0;
     const maxY = Math.min(dirtLayer.height, position.y + height);
@@ -292,15 +300,15 @@ export class DigSceneRenderer {
         const dx = cellCx - cx;
         const dy = cellCy - cy;
         if (dx * dx + dy * dy <= radius * radius) {
-          // Golden fill with slight outline per-cell for crispness
-          this.ctx.fillStyle = '#FFD700';
+          // Fill with provided color and subtle outline per-cell for crispness
+          this.ctx.fillStyle = fillColor;
           this.ctx.fillRect(
             originX + x * this.cellWidth,
             originY + y * this.cellHeight,
             this.cellWidth,
             this.cellHeight
           );
-          this.ctx.strokeStyle = 'rgba(180, 140, 0, 0.25)';
+          this.ctx.strokeStyle = strokeColor;
           this.ctx.lineWidth = 1;
           this.ctx.strokeRect(
             originX + x * this.cellWidth + 0.5,

@@ -1,6 +1,6 @@
 // Job: Own the core game loop, viewport sizing, and state. Computes a portrait dig area
 // that always fits the viewport and provides dynamic cell sizes and offsets to renderer/tools.
-import { GameState, GamePhase, DirtLayer, ArtifactData } from '../../../shared/types/game';
+import { GameState, GamePhase, DirtLayer, ArtifactData, TrashItem } from '../../../shared/types/game';
 
 export class GameEngine {
   private canvas: HTMLCanvasElement;
@@ -36,6 +36,7 @@ export class GameEngine {
       phase: 'splash',
       dirtLayer: this.createEmptyDirtLayer(),
       artifact: this.createPlaceholderArtifact(),
+      trashItems: [],
       uncoveredPercentage: 0,
       isDamaged: false,
       isBroken: false,
@@ -197,18 +198,20 @@ export class GameEngine {
       return remainingDepth; // smaller values are deeper in our model
     };
     if (looksCanonical) {
-      this.state.artifact = {
+      const placed = {
         ...artifact,
         position: {
           x: Math.round((artifact.position.x / 100) * gridW),
           y: Math.round((artifact.position.y / 100) * gridH),
         },
-        width: Math.max(1, Math.round((artifact.width / 100) * gridW)),
-        height: Math.max(1, Math.round((artifact.height / 100) * gridH)),
+        width: 3,
+        height: 3,
         depth: assignDepth(artifact.depth),
-      };
+      } as ArtifactData;
+      this.state.artifact = placed;
     } else {
-      this.state.artifact = { ...artifact, depth: assignDepth(artifact.depth) };
+      const placed = { ...artifact, width: 3, height: 3, depth: assignDepth(artifact.depth) } as ArtifactData;
+      this.state.artifact = placed;
     }
     console.log(
       'Artifact placement -> layerFromSurface:',
@@ -216,6 +219,44 @@ export class GameEngine {
       ' remainingDepth:',
       this.state.artifact.depth
     );
+
+    // Generate two trash items now that artifact is placed
+    this.state.trashItems = this.generateTrashItems(2, 3, 3);
+  }
+
+  private generateTrashItems(count: number, width: number, height: number): TrashItem[] {
+    const items: TrashItem[] = [];
+    const gridW = this.state.dirtLayer.width;
+    const gridH = this.state.dirtLayer.height;
+
+    const artifact = this.state.artifact;
+    const artifactRect = { x: artifact.position.x, y: artifact.position.y, w: artifact.width, h: artifact.height };
+
+    const nonOverlap = (x: number, y: number): boolean => {
+      // Avoid overlap with artifact rect and already placed trash rects
+      const rect = { x, y, w: width, h: height };
+      const overlap = (r1: any, r2: any) => !(r1.x + r1.w <= r2.x || r2.x + r2.w <= r1.x || r1.y + r1.h <= r2.y || r2.y + r2.h <= r1.y);
+      if (overlap(rect, artifactRect)) return false;
+      for (const t of items) {
+        const tr = { x: t.position.x, y: t.position.y, w: t.width, h: t.height };
+        if (overlap(rect, tr)) return false;
+      }
+      return true;
+    };
+
+    const assignDepth = (): number => {
+      const layerFromSurface = 40 + Math.floor(Math.random() * 21); // 40..60
+      return Math.max(0, 60 - layerFromSurface);
+    };
+
+    let safety = 2000;
+    while (items.length < count && safety-- > 0) {
+      const x = Math.floor(Math.random() * Math.max(1, gridW - width));
+      const y = Math.floor(Math.random() * Math.max(1, gridH - height));
+      if (!nonOverlap(x, y)) continue;
+      items.push({ position: { x, y }, width, height, depth: assignDepth() });
+    }
+    return items;
   }
 
   public start(): void {
@@ -311,6 +352,7 @@ export class GameEngine {
         (this as any).biome,
         (this as any).dirtMaterials,
         (this as any).borderColor,
+        this.state.trashItems,
         this.state.artifact,
         this.state.uncoveredPercentage,
         {
