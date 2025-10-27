@@ -1,9 +1,9 @@
 // Job: Create Type A and Type B posts; configure splash and seed per-post data; mirror dynamic stats to post text fallback when possible
 import { context, reddit, redis } from '@devvit/web/server';
 import { getRandomSubreddit } from './subreddit-picker';
-import { getCommunityStats } from './digsite';
+// import { getCommunityStats } from './digsite';
 
-export const createPostA = async (targetSubreddit?: string) => {
+export const createPostA = async (targetSubreddit?: string, depthLevel: 'surface' | 'shallow' | 'deep' | 'deepest' = 'surface') => {
   // If no target subreddit provided, pick one dynamically
   if (!targetSubreddit) {
     targetSubreddit = await getRandomSubreddit(0.6); // 60% weight to user's known subreddits
@@ -44,12 +44,19 @@ export const createPostA = async (targetSubreddit?: string) => {
   const backgroundOptions = ['desert-digsite.png', 'jungle-digsite.png', 'mountain-digsite.png'];
   const backgroundUri = backgroundOptions[Math.floor(Math.random() * backgroundOptions.length)];
 
+  const depthToAge = (d: typeof depthLevel) => {
+    if (d === 'surface') return '0-3y';
+    if (d === 'shallow') return '3-6y';
+    if (d === 'deep') return '6-9y';
+    return '9+y';
+  };
+
   const post = (await reddit.submitCustomPost({
     entrypoint: 'typeA',
     splash: {
       appDisplayName: 'Diggit',
       heading: `r/${targetSubreddit} \n Dig Site Discovered! `,
-      description: `\n \u26B1\uFE0E Artifacts found here: 0 \n ☓\uFE0E Broken by a shovel: 0`,
+      description: `\n - Depth level: ${depthLevel.toUpperCase()} \n - Artifact age: ${depthToAge(depthLevel)}`,
       buttonLabel: '⛏\uFE0E Excavate!',
       backgroundUri,
       appIconUri,
@@ -74,8 +81,7 @@ export const createPostA = async (targetSubreddit?: string) => {
 
   // After creation, mirror latest community stats into the post's text fallback
   try {
-    const stats = await getCommunityStats(post.id);
-    const fallbackText = `Dig Site Discovered!\n\n⛏️ Found here: ${stats.artifactsFound}\n💔 Broken: ${stats.artifactsBroken}`;
+    const fallbackText = `Dig Site Discovered!\n\n- Depth level: ${depthLevel.toUpperCase()}\n- Artifact age: ${depthToAge(depthLevel)}`;
     if (typeof post.setTextFallback === 'function') {
       await post.setTextFallback({ text: fallbackText });
     }

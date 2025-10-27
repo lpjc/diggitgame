@@ -23,6 +23,9 @@ export const App = () => {
   const [showDiscovery, setShowDiscovery] = useState(false);
   const [artifactAdded, setArtifactAdded] = useState(false);
   const [celebration, setCelebration] = useState<{ show: boolean; stage: 'idle'|'pulse'|'linger' }>(() => ({ show: false, stage: 'idle' }));
+  const [claiming, setClaiming] = useState(false);
+  const [localFound, setLocalFound] = useState<number | null>(null);
+  const [plusOne, setPlusOne] = useState(false);
   
   const gameEngineRef = useRef<GameEngine | null>(null);
   const toolManagerRef = useRef<ToolManager | null>(null);
@@ -44,6 +47,12 @@ export const App = () => {
 
     loadDigSite();
   }, []);
+
+  useEffect(() => {
+    if (digSiteData?.depthProgress) {
+      setLocalFound(digSiteData.depthProgress.found);
+    }
+  }, [digSiteData?.depthProgress?.found]);
 
   const startGame = () => {
     if (!canvasRef.current || !digSiteData) return;
@@ -99,9 +108,8 @@ export const App = () => {
     };
 
     (engine as any).onReveal95 = () => {
-      setCelebration({ show: true, stage: 'pulse' });
-      // After 1.5s pulse, move to linger
-      setTimeout(() => setCelebration({ show: true, stage: 'linger' }), 1500);
+      // Instead of emoji overlay, open the discovery modal with nugget tap-to-reveal
+      setShowDiscovery(true);
     };
 
     // Initialize tool manager
@@ -197,32 +205,51 @@ export const App = () => {
     if (!digSiteData || !artifactSystemRef.current) return;
 
     try {
+      setClaiming(true);
       console.log('Add to museum clicked');
       
-      // Prepare artifact data for the new persistence system
-      const artifactData = {
-        type: digSiteData.artifact.type,
-        redditData: digSiteData.artifact.post,
-        relicData: digSiteData.artifact.relic,
-      };
-      
-      // Call new artifact persistence API
-      const response = await fetchAPI<{
-        success: boolean;
-        artifactId: string;
-        foundByCount: number;
-        rarityTier: string;
-      }>('/api/artifact/save', {
-        method: 'POST',
-        body: JSON.stringify({
-          artifactData,
-          sourceDigSite: digSiteData.postId,
-          isBroken: artifactSystemRef.current.isBrokenState(),
-        }),
-      });
-      
-      console.log(`Artifact saved! Rarity: ${response.rarityTier}, Found by ${response.foundByCount} players`);
-      setArtifactAdded(true);
+      if (digSiteData.artifact.type === 'subreddit_relic' && digSiteData.artifact.relic) {
+        // Relic flow: create new dig site under USER and comment
+        await fetchAPI('/api/relic/claim', {
+          method: 'POST',
+          body: JSON.stringify({
+            subredditName: digSiteData.artifact.relic.subredditName,
+            sourcePostId: digSiteData.postId,
+          }),
+        });
+        setArtifactAdded(true);
+      } else {
+        // Prepare artifact data for the new persistence system
+        const artifactData = {
+          type: digSiteData.artifact.type,
+          redditData: digSiteData.artifact.post,
+          relicData: digSiteData.artifact.relic,
+        };
+        
+        // Call new artifact persistence API
+        const response = await fetchAPI<{
+          success: boolean;
+          artifactId: string;
+          foundByCount: number;
+          rarityTier: string;
+        }>('/api/artifact/save', {
+          method: 'POST',
+          body: JSON.stringify({
+            artifactData,
+            sourceDigSite: digSiteData.postId,
+            isBroken: artifactSystemRef.current.isBrokenState(),
+          }),
+        });
+        
+        console.log(`Artifact saved! Rarity: ${response.rarityTier}, Found by ${response.foundByCount} players`);
+        setArtifactAdded(true);
+
+        if (!artifactSystemRef.current.isBrokenState() && digSiteData.artifact.type === 'post') {
+          setLocalFound((prev) => (prev == null ? (digSiteData.depthProgress?.found || 0) + 1 : prev + 1));
+          setPlusOne(true);
+          setTimeout(() => setPlusOne(false), 900);
+        }
+      }
 
       // Update community and player stats, and mirror to postData
       try {
@@ -238,6 +265,9 @@ export const App = () => {
       }
     } catch (error) {
       console.error('Failed to add artifact to museum:', error);
+    }
+    finally {
+      setClaiming(false);
     }
   };
 
@@ -261,13 +291,7 @@ export const App = () => {
 
   return (
     <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
-      <style>{`
-        @keyframes celebration-ring {
-          0% { transform: scale(0.6); opacity: 0.9; }
-          60% { opacity: 0.5; }
-          100% { transform: scale(1.25); opacity: 0; }
-        }
-      `}</style>
+      <style>{`@keyframes float-up { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-12px); } }`}</style>
       <div className="absolute inset-0 flex items-center justify-center p-2">
         <div className="relative w-full h-full max-w-[100vh] max-h-[100vh] aspect-[9/16]">
           <canvas
@@ -276,73 +300,36 @@ export const App = () => {
             style={{ touchAction: 'none' }}
           />
 
-          {celebration.show && (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
-              {/* Dim background */}
-              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.45)' }} />
-              {/* Light rays and pulses */}
-              <div
-                className="relative flex items-center justify-center"
-                style={{ width: '60%', height: '40%', pointerEvents: 'none' }}
-              >
-                <div
-                  className="absolute"
-                  style={{
-                    width: '220px',
-                    height: '220px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(255,223,119,0.85) 0%, rgba(255,223,119,0.25) 45%, rgba(255,223,119,0) 70%)',
-                    transform: celebration.stage === 'pulse' ? 'scale(1.15)' : 'scale(1)',
-                    transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    filter: 'blur(1px)',
-                  }}
-                />
-                <div
-                  className="absolute"
-                  style={{
-                    width: '260px',
-                    height: '260px',
-                    borderRadius: '50%',
-                    border: '3px solid rgba(255,220,120,0.9)',
-                  animation: 'celebration-ring 1400ms ease-out infinite',
-                  }}
-                />
-                <div
-                  className="relative flex items-center justify-center"
-                  style={{
-                    color: '#FFD700',
-                    fontSize: '48px',
-                    textShadow: '0 3px 10px rgba(0,0,0,0.6)',
-                    transform: celebration.stage === 'pulse' ? 'scale(1.25)' : 'scale(1.0)',
-                    transition: 'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  }}
-                >
-                  {/* Placeholder artifact icon */}
-                  {digSiteData.artifact.type === 'subreddit_relic' ? '🏛️' : '📜'}
-                </div>
-              </div>
-
-              {/* CTA button */}
-              {celebration.stage === 'linger' && (
-                <div className="absolute bottom-[12%] w-full flex justify-center" style={{ pointerEvents: 'auto' }}>
-                  <button
-                    onClick={handleAddToMuseum}
-                    className="px-5 py-3 rounded-lg text-gray-900 font-bold"
-                    style={{
-                      background: 'linear-gradient(180deg, #FFE082 0%, #FFC107 100%)',
-                      boxShadow: '0 6px 18px rgba(255,193,7,0.45), inset 0 2px 0 rgba(255,255,255,0.7)',
-                    }}
-                  >
-                    Add to your Museum
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* celebration overlay removed in favor of nugget modal */}
         </div>
       </div>
 
       {gameStarted && <ToolDock activeTool={activeTool} onToolSelect={handleToolSelect} />}
+
+      {/* Depth Progress HUD */}
+      {digSiteData?.depthProgress && (
+        <div className="absolute left-2 bottom-2 bg-black/60 text-white rounded-lg px-3 py-2 text-xs relative">
+          {digSiteData.depthProgress.threshold != null && (
+            <div className="w-48 h-2 bg-white/20 rounded overflow-hidden">
+              <div className="h-full bg-orange-400" style={{ width: `${(() => {
+                const found = localFound ?? digSiteData.depthProgress.found;
+                const threshold = digSiteData.depthProgress.threshold || 1;
+                return Math.min(100, Math.floor((found / threshold) * 100));
+              })()}%` }} />
+            </div>
+          )}
+          {digSiteData.depthProgress.threshold != null && (
+            <div className="mt-1 opacity-80">Artifacts until next depth: {(() => {
+              const found = localFound ?? digSiteData.depthProgress.found;
+              const threshold = digSiteData.depthProgress.threshold || 0;
+              return Math.max(0, threshold - found);
+            })()}</div>
+          )}
+          {plusOne && (
+            <div style={{ position: 'absolute', right: '6px', top: '-4px', color: '#FDBA74', fontWeight: 700, fontSize: '12px', animation: 'float-up 0.9s ease-out forwards' }}>+1</div>
+          )}
+        </div>
+      )}
 
       {showDiscovery && digSiteData && (
         <DiscoveryModal
@@ -353,6 +340,12 @@ export const App = () => {
           onViewMuseum={() => console.log('Navigate to museum')}
           isAdded={artifactAdded}
         />
+      )}
+
+      {claiming && (
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-md px-4 py-3 text-sm font-semibold">Claiming...</div>
+        </div>
       )}
     </div>
   );

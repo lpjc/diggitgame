@@ -1,19 +1,33 @@
 import { reddit, redis } from '@devvit/web/server';
-import { RedditPost, SubredditRelic } from '../../shared/types/game';
+import { RedditPost, SubredditRelic, DepthLevel } from '../../shared/types/game';
 
 const POST_CACHE_PREFIX = 'reddit:post:cache:';
 const SUBREDDIT_CACHE_PREFIX = 'reddit:subreddit:cache:';
 const CACHE_TTL = 86400; // 24 hours in seconds
 const SIX_MONTHS_AGO = Date.now() - 6 * 30 * 24 * 60 * 60 * 1000;
 
+type AgeRange = { minYears?: number; maxYears?: number };
+function ageRangeFor(depth: DepthLevel): AgeRange {
+  switch (depth) {
+    case 'surface':
+      return { minYears: 0, maxYears: 3 };
+    case 'shallow':
+      return { minYears: 3, maxYears: 6 };
+    case 'deep':
+      return { minYears: 6, maxYears: 9 };
+    case 'deepest':
+      return { minYears: 9 };
+  }
+}
+
 /**
  * Fetch a random historical post from a subreddit
  * Posts must be older than 6 months and have engagement
  */
-export async function fetchHistoricalPost(subredditName: string): Promise<RedditPost | null> {
+export async function fetchHistoricalPost(subredditName: string, age?: AgeRange): Promise<RedditPost | null> {
   try {
     // Check cache first
-    const cacheKey = `${POST_CACHE_PREFIX}${subredditName}`;
+    const cacheKey = `${POST_CACHE_PREFIX}${subredditName}:${age?.minYears ?? 'min'}-${age?.maxYears ?? 'max'}`;
     const cachedData = await redis.get(cacheKey);
     
     if (cachedData) {
@@ -27,10 +41,18 @@ export async function fetchHistoricalPost(subredditName: string): Promise<Reddit
       limit: 100,
     }).all();
 
-    // Filter posts older than 6 months with engagement
+    // Filter posts by age range with engagement
+    const now = Date.now();
+    const minMs = (age?.minYears ?? 0) * 365 * 24 * 60 * 60 * 1000;
+    const maxMs = (age?.maxYears ?? 1000) * 365 * 24 * 60 * 60 * 1000; // 1000y sentinel
     const eligiblePosts = posts.filter((post) => {
-      const postAge = post.createdAt.getTime();
-      return postAge < SIX_MONTHS_AGO && post.score > 10;
+      const createdMs = post.createdAt.getTime();
+      const ageMs = now - createdMs;
+      const within = ageMs >= minMs && ageMs < maxMs;
+      // Also ensure older than 6 months for quality, unless minYears==0
+      const olderThanSixMonths = createdMs < SIX_MONTHS_AGO;
+      const ageGate = (age?.minYears ?? 0) === 0 ? true : olderThanSixMonths;
+      return within && ageGate && post.score > 10;
     });
 
     if (eligiblePosts.length === 0) {

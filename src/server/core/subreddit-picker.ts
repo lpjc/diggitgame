@@ -1,4 +1,5 @@
-import { reddit } from '@devvit/web/server';
+import { reddit, redis } from '@devvit/web/server';
+import type { DepthLevel } from '../../shared/types/game';
 
 /**
  * Default popular subreddits used when user history is scarce or by weighted choice
@@ -244,7 +245,8 @@ export async function getUserRecentSubreddits(
  * @param knownToPlayerWeight - Probability (0-1) to pick from user's list when available
  */
 export async function getRandomSubreddit(
-  knownToPlayerWeight: number = 0.5
+  knownToPlayerWeight: number = 0.5,
+  depth?: DepthLevel
 ): Promise<string> {
   const clamped = Math.max(0, Math.min(1, knownToPlayerWeight));
   let userPool: string[] = [];
@@ -260,7 +262,17 @@ export async function getRandomSubreddit(
 
   const canUseUserPool = userPool.length >= 2;
   const useUser = canUseUserPool && Math.random() < clamped;
-  const pool = useUser ? userPool : DEFAULT_SUBREDDITS;
+  let pool = useUser ? userPool : DEFAULT_SUBREDDITS;
+  if (depth) {
+    // Filter out subreddits that already have a dig site for this depth
+    const candidates: string[] = [];
+    for (const s of pool) {
+      const key = `digsite:index:r:${s.toLowerCase()}:depth:${depth}`;
+      const exists = await redis.get(key);
+      if (!exists) candidates.push(s);
+    }
+    if (candidates.length) pool = candidates;
+  }
 
   if (!pool.length) return 'askreddit'; // Ultimate fallback
 
@@ -275,7 +287,8 @@ export async function getRandomSubreddit(
  */
 export async function getRecommendedSubreddits(
   count: number,
-  knownToPlayerWeight: number = 0.5
+  knownToPlayerWeight: number = 0.5,
+  depth?: DepthLevel
 ): Promise<string[]> {
   const clamped = Math.max(0, Math.min(1, knownToPlayerWeight));
   let userPool: string[] = [];
@@ -301,8 +314,20 @@ export async function getRecommendedSubreddits(
   const seen = new Set<string>();
 
   // Helper to draw without replacement from an array
-  function drawFrom(arr: string[]): string | null {
-    const pool = arr.filter((s) => !seen.has(s));
+  async function filterDepth(arr: string[]): Promise<string[]> {
+    if (!depth) return arr;
+    const out: string[] = [];
+    for (const s of arr) {
+      const key = `digsite:index:r:${s.toLowerCase()}:depth:${depth}`;
+      const exists = await redis.get(key);
+      if (!exists) out.push(s);
+    }
+    return out;
+  }
+
+  async function drawFrom(arr: string[]): Promise<string | null> {
+    const filtered = await filterDepth(arr);
+    const pool = filtered.filter((s) => !seen.has(s));
     if (!pool.length) return null;
     const idx = Math.floor(Math.random() * pool.length);
     const val = pool[idx];
@@ -318,8 +343,8 @@ export async function getRecommendedSubreddits(
     const first = targetIsUser ? userPool : DEFAULT_SUBREDDITS;
     const second = targetIsUser ? DEFAULT_SUBREDDITS : userPool;
 
-    if (drawFrom(first) == null) {
-      if (drawFrom(second) == null) break; // Nowhere to draw from
+    if ((await drawFrom(first)) == null) {
+      if ((await drawFrom(second)) == null) break; // Nowhere to draw from
     }
   }
 

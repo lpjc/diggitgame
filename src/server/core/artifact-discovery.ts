@@ -5,7 +5,7 @@ import {
   incrementFoundByCount,
 } from './artifact-db';
 import { addPlayerReference, hasPlayerCollectedArtifact } from './player-references';
-import { updateCommunityStats } from './digsite';
+import { updateCommunityStats, checkAndUnlockNextDepth } from './digsite';
 import { updatePlayerStatsCounters } from './museum';
 import {
   SaveArtifactRequest,
@@ -76,11 +76,14 @@ export async function saveDiscoveredArtifact(
     });
   }
 
-  // 6. Update stats only if this is the first time this user collects this artifact
+  // 6. Update community stats for every intact claim (progress is community-driven)
+  await updateCommunityStats(sourceDigSite, 'found');
+  // Update player stats only once per unique artifact
   if (!alreadyCollected) {
-    await updateCommunityStats(sourceDigSite, 'found');
     await updatePlayerStatsCounters(userId, 'found');
   }
+  // Depth progression: check unlock after any found event
+  await checkAndUnlockNextDepth(sourceDigSite);
 
   // 7. Calculate rarity tier
   const rarityTier = getRarityTier(newFoundByCount);

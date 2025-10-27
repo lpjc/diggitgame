@@ -94,6 +94,10 @@ export type DigSiteData = {
   artifact: ArtifactData;
   communityStats: CommunityStats;
   subredditIconUrl?: string | undefined;
+  // Depth system fields
+  depthLevel?: DepthLevel;
+  nextDepth?: DepthLevel | null;
+  depthProgress?: { found: number; threshold: number | null };
 };
 
 // Player/Museum data
@@ -118,3 +122,6 @@ export type GameState = {
   isBroken: boolean;
   activeTool: 'detector' | 'shovel' | 'brush' | null;
 };
+
+// Depth system
+export type DepthLevel = 'surface' | 'shallow' | 'deep' | 'deepest';

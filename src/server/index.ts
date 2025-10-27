@@ -12,7 +12,7 @@ import { createPostA, createPostB } from './core/post';
 import { getRecommendedSubreddits } from './core/subreddit-picker';
 import { getDataFeed } from './core/data';
 import { createUserPost, createUserComment } from './core/userActions';
-import { getDigSiteData, getCommunityStats } from './core/digsite';
+import { getDigSiteData, getCommunityStats, getDepthForPost, getNextDepth, getThreshold } from './core/digsite';
 import { fetchHistoricalPost, getSubredditTheme } from './core/reddit';
 import { getPlayerStats, addArtifactToMuseum, unlockSubreddit } from './core/museum';
 import { BiomeType, DirtMaterial, ArtifactData, CollectedArtifact } from '../shared/types/game';
@@ -279,7 +279,16 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
           relic: theme,
         };
       } else {
-        const post = await fetchHistoricalPost(targetSubreddit);
+        const depthLevel = (await getDepthForPost(postId)) || 'surface';
+        const age = (() => {
+          switch (depthLevel) {
+            case 'surface': return { minYears: 0, maxYears: 3 };
+            case 'shallow': return { minYears: 3, maxYears: 6 };
+            case 'deep': return { minYears: 6, maxYears: 9 };
+            case 'deepest': return { minYears: 9 };
+          }
+        })();
+        const post = await fetchHistoricalPost(targetSubreddit, age);
         if (!post) {
           // Fallback if no post found
           res.status(500).json({
@@ -302,6 +311,9 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
       }
       
       const communityStats = await getCommunityStats(postId);
+      const depthLevel = (await getDepthForPost(postId)) || 'surface';
+      const nextDepth = getNextDepth(depthLevel);
+      const depthProgress = { found: communityStats.artifactsFound, threshold: getThreshold(depthLevel) } as { found: number; threshold: number | null };
       
       digSiteData = {
         postId,
@@ -311,6 +323,9 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
         borderColor: theme.primaryColor,
         artifact,
         communityStats,
+        depthLevel,
+        nextDepth,
+        depthProgress,
         ...(theme.iconUrl && { subredditIconUrl: theme.iconUrl }),
       };
     }
@@ -327,7 +342,7 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
 
 router.post('/api/digsite/create', async (req, res): Promise<void> => {
   try {
-    const { targetSubreddit } = req.body;
+    const { targetSubreddit, depthLevel } = req.body as { targetSubreddit?: string; depthLevel?: 'surface' | 'shallow' | 'deep' | 'deepest' };
 
     if (!targetSubreddit) {
       res.status(400).json({
@@ -336,23 +351,14 @@ router.post('/api/digsite/create', async (req, res): Promise<void> => {
       });
       return;
     }
-
-    // Create a new TypeA post for this dig site
-    const post = await createPostA();
-    
-    // Store the target subreddit for this post
-    await redis.set(`digsite:${post.id}:target`, targetSubreddit);
-    
-    // Initialize community stats
-    await redis.set(`digsite:${post.id}:stats`, JSON.stringify({
-      artifactsFound: 0,
-      artifactsBroken: 0,
-    }));
+    const { getOrCreateDigSiteForSubredditDepth } = await import('./core/digsite');
+    const depth = depthLevel || 'surface';
+    const { postId } = await getOrCreateDigSiteForSubredditDepth(targetSubreddit, depth);
 
     res.json({
       success: true,
-      postId: post.id,
-      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
+      postId,
+      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${postId}`,
     });
   } catch (error) {
     console.error('Error creating dig site:', error);
@@ -630,7 +636,7 @@ router.post('/api/museum/add-artifact', async (req, res): Promise<void> => {
 // Relic discovery endpoint
 router.post('/api/relic/claim', async (req, res): Promise<void> => {
   try {
-    const { subredditName, sourcePostId } = req.body;
+    const { subredditName, sourcePostId } = req.body as { subredditName?: string; sourcePostId?: string };
     const username = await reddit.getCurrentUsername();
     const userId = username || 'anonymous';
 
@@ -644,30 +650,42 @@ router.post('/api/relic/claim', async (req, res): Promise<void> => {
 
     // Unlock the subreddit for the player
     await unlockSubreddit(userId, subredditName);
-    
-    // Post a comment on the source dig site announcing the discovery
+
+    // Ensure a unique dig site for surface depth exists; if not, create under user identity
+    const { getOrCreateDigSiteForSubredditDepth } = await import('./core/digsite');
+    const result = await getOrCreateDigSiteForSubredditDepth(subredditName, 'surface');
+    const digPostId = result.postId;
+
+    // Post a comment on the source dig site under USER, inviting others
     try {
       await reddit.submitComment({
-        id: sourcePostId,
-        text: `🎉 ${username || 'A player'} discovered the r/${subredditName} relic! A new dig site has been unlocked!`,
-      });
+        runAs: 'USER',
+        postId: sourcePostId,
+        text: `I found a treasure map to the ancient ruins of r/${subredditName}. Come explore with me here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
+      } as any);
     } catch (commentError) {
       console.error('Failed to post discovery comment:', commentError);
-      // Continue even if comment fails
     }
-    
-    // Create a new dig site post for the discovered subreddit
-    const newDigSite = await createPostA();
-    await redis.set(`digsite:${newDigSite.id}:target`, subredditName);
-    await redis.set(`digsite:${newDigSite.id}:stats`, JSON.stringify({
-      artifactsFound: 0,
-      artifactsBroken: 0,
-    }));
+
+    // Also create a user post pointing to the new dig site (optional UGC)
+    try {
+      await reddit.submitPost({
+        runAs: 'USER',
+        subredditName: context.subredditName!,
+        title: `New Dig Site Opened: r/${subredditName}`,
+        userGeneratedContent: {
+          text: `A new dig site has been opened for r/${subredditName}. Join the excavation here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
+        },
+        splash: { appDisplayName: 'User Generated Post', heading: 'User Created Content', description: 'A post created by a user', buttonLabel: 'View Post', entryUri: 'typeA.html' },
+      } as any);
+    } catch (postErr) {
+      // Non-fatal; continue
+    }
 
     res.json({
       success: true,
-      newDigSiteId: newDigSite.id,
-      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${newDigSite.id}`,
+      newDigSiteId: digPostId,
+      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
     });
   } catch (error) {
     console.error('Error claiming relic:', error);
