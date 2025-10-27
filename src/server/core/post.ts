@@ -56,8 +56,8 @@ export const createPostA = async (targetSubreddit?: string, depthLevel: 'surface
     splash: {
       appDisplayName: 'Diggit',
       heading: `r/${targetSubreddit} \n Dig Site Discovered! `,
-      description: `\n - Depth level: ${depthLevel.toUpperCase()} \n - Artifact age: ${depthToAge(depthLevel)}`,
-      buttonLabel: '⛏\uFE0E Excavate!',
+      description: `\n ⛏\uFE0E Depth: ${depthLevel} \n \u26B1\uFE0E Artifact Age: ${depthToAge(depthLevel)}`,
+      buttonLabel: 'Excavate!',
       backgroundUri,
       appIconUri,
     },
