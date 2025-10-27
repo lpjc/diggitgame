@@ -1,5 +1,7 @@
+// Job: Create Type A and Type B posts; configure splash and seed per-post data; mirror dynamic stats to post text fallback when possible
 import { context, reddit, redis } from '@devvit/web/server';
 import { getRandomSubreddit } from './subreddit-picker';
+import { getCommunityStats } from './digsite';
 
 export const createPostA = async (targetSubreddit?: string) => {
   // If no target subreddit provided, pick one dynamically
@@ -70,6 +72,17 @@ export const createPostA = async (targetSubreddit?: string) => {
   } as any)) as any;
   console.log('PostA created:', post.id);
 
+  // After creation, mirror latest community stats into the post's text fallback
+  try {
+    const stats = await getCommunityStats(post.id);
+    const fallbackText = `Dig Site Discovered!\n\n⛏️ Found here: ${stats.artifactsFound}\n💔 Broken: ${stats.artifactsBroken}`;
+    if (typeof post.setTextFallback === 'function') {
+      await post.setTextFallback({ text: fallbackText });
+    }
+  } catch (fallbackErr) {
+    console.warn('Failed to set text fallback with community stats:', fallbackErr);
+  }
+
   // Store post type and target subreddit in Redis
   await redis.set(`post:${post.id}:type`, 'typeA');
   await redis.set(`digsite:${post.id}:target`, targetSubreddit);
@@ -91,18 +104,17 @@ export const createPostB = async (userId?: string) => {
   }
 
   const username = userId || (await reddit.getCurrentUsername()) || 'anonymous';
-  const snoovatarUrl = username ? await reddit.getSnoovatarUrl(username) : 'museum-icon.png';
 
-  console.log(`Creating PostB (Museum) for user: ${username}`);
+  console.log(`Creating PostB (Museum)`);
   const post = (await reddit.submitCustomPost({
     entrypoint: 'typeB',
     splash: {
-      appDisplayName: `The u/${username} Collection`,
-      heading: `u/${username}'s Museum`,
-      description: `Your collection of discovered artifacts\n\n \u26B1\uFE0E Found in total: 0`,
+      appDisplayName: `Your Museum`,
+      heading: `Your Museum`,
+      description: `Your Unique Collection of discovered artifacts \n\n \u26B1\uFE0E`,
       buttonLabel: 'Enter Museum',
       backgroundUri: 'museum-post-background.png',
-      appIconUri: snoovatarUrl,
+      appIconUri: 'museum-icon.png',
     },
     postData: {
       postType: 'typeB',
@@ -119,7 +131,7 @@ export const createPostB = async (userId?: string) => {
       lastUpdatedAt: Date.now(),
     },
     subredditName: subredditName,
-    title: `${username}'s Artifact Museum`,
+    title: `Your Museum`,
   } as any)) as any;
   console.log('PostB created:', post.id);
 

@@ -7,11 +7,12 @@ import {
   UserActionResponse,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
+// Job: Server routes for app; creates posts; serves digsite/museum APIs; mirrors dynamic stats to postData and text fallback where possible
 import { createPostA, createPostB } from './core/post';
 import { getRecommendedSubreddits } from './core/subreddit-picker';
 import { getDataFeed } from './core/data';
 import { createUserPost, createUserComment } from './core/userActions';
-import { getDigSiteData, getCommunityStats, updateCommunityStats } from './core/digsite';
+import { getDigSiteData, getCommunityStats } from './core/digsite';
 import { fetchHistoricalPost, getSubredditTheme } from './core/reddit';
 import { getPlayerStats, addArtifactToMuseum, unlockSubreddit } from './core/museum';
 import { BiomeType, DirtMaterial, ArtifactData, CollectedArtifact } from '../shared/types/game';
@@ -364,27 +365,19 @@ router.post('/api/digsite/create', async (req, res): Promise<void> => {
 
 router.post('/api/stats/update', async (req, res): Promise<void> => {
   try {
-    const { postId, action } = req.body;
-    const username = await reddit.getCurrentUsername();
+    const { postId } = req.body;
 
-    if (!postId || !action) {
+    if (!postId) {
       res.status(400).json({
         status: 'error',
-        message: 'postId and action are required',
+        message: 'postId is required',
       });
       return;
     }
 
-    if (action !== 'found' && action !== 'broken') {
-      res.status(400).json({
-        status: 'error',
-        message: 'action must be "found" or "broken"',
-      });
-      return;
-    }
-
-    // Update community stats (Redis)
-    const communityStats = await updateCommunityStats(postId, action);
+    // action is now ignored for mutations: this endpoint is a refresh only
+    // Read current community stats (no mutation here to avoid double counting)
+    const communityStats = await getCommunityStats(postId);
     
     // Also update postData with latest community stats
     try {
@@ -395,22 +388,20 @@ router.post('/api/stats/update', async (req, res): Promise<void> => {
         communityStats,
         lastUpdatedAt: Date.now(),
       });
+
+      // Mirror stats to text fallback for visibility on the post
+      const fallbackText = `Dig Site Discovered!\n\n⛏️ Found here: ${communityStats.artifactsFound}\n💔 Broken: ${communityStats.artifactsBroken}`;
+      if (typeof (post as any).setTextFallback === 'function') {
+        await (post as any).setTextFallback({ text: fallbackText });
+      }
     } catch (pdErr) {
       console.warn('Failed to update postData for stats:', pdErr);
       // non-fatal
     }
     
-    // Update player stats
-    const userId = username || 'anonymous';
-    const playerStats = await getPlayerStats(userId);
-
     res.json({
       success: true,
       communityStats,
-      playerStats: {
-        artifactsFound: playerStats.artifactsFound,
-        artifactsBroken: playerStats.artifactsBroken,
-      },
     });
   } catch (error) {
     console.error('Error updating stats:', error);

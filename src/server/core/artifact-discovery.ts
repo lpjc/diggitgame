@@ -4,7 +4,7 @@ import {
   createCentralizedArtifact,
   incrementFoundByCount,
 } from './artifact-db';
-import { addPlayerReference } from './player-references';
+import { addPlayerReference, hasPlayerCollectedArtifact } from './player-references';
 import { updateCommunityStats } from './digsite';
 import { updatePlayerStatsCounters } from './museum';
 import {
@@ -58,20 +58,29 @@ export async function saveDiscoveredArtifact(
   }
 
   // 4. Increment foundByCount (only for intact artifacts)
-  const newFoundByCount = await incrementFoundByCount(artifactId);
+  // Idempotency: if this user already saved this artifact, don't increment any counters again
+  const alreadyCollected = await hasPlayerCollectedArtifact(userId, artifactId);
+  let newFoundByCount = artifact.foundByCount;
+  if (!alreadyCollected) {
+    newFoundByCount = await incrementFoundByCount(artifactId);
+  }
 
-  // 5. Create player reference (only for intact artifacts)
-  await addPlayerReference(userId, {
-    artifactId,
-    userId,
-    collectedAt: Date.now(),
-    isBroken: false,
-    sourceDigSite,
-  });
+  // 5. Create player reference (only for intact artifacts); skip if already exists
+  if (!alreadyCollected) {
+    await addPlayerReference(userId, {
+      artifactId,
+      userId,
+      collectedAt: Date.now(),
+      isBroken: false,
+      sourceDigSite,
+    });
+  }
 
-  // 6. Update stats
-  await updateCommunityStats(sourceDigSite, 'found');
-  await updatePlayerStatsCounters(userId, 'found');
+  // 6. Update stats only if this is the first time this user collects this artifact
+  if (!alreadyCollected) {
+    await updateCommunityStats(sourceDigSite, 'found');
+    await updatePlayerStatsCounters(userId, 'found');
+  }
 
   // 7. Calculate rarity tier
   const rarityTier = getRarityTier(newFoundByCount);
