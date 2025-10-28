@@ -80,13 +80,28 @@ export class BrushTool implements Tool {
           ) {
             const currentDepth = dirtLayer.cells[targetY][targetX];
             if (currentDepth > 0) {
-              dirtLayer.cells[targetY][targetX] = Math.max(0, currentDepth - brushDepth);
+              const after = Math.max(0, currentDepth - brushDepth);
+              dirtLayer.cells[targetY][targetX] = after;
 
               // Create dust particle near the affected cell center
               if (Math.random() < 0.3) {
                 const cx = originX + (targetX + 0.5) * cellWidth + (Math.random() - 0.5) * cellWidth * 0.6;
                 const cy = originY + (targetY + 0.5) * cellHeight + (Math.random() - 0.5) * cellHeight * 0.6;
                 this.createDustParticle(cx, cy);
+              }
+
+              // Detect trash threshold crossing and notify manager
+              if (context.trashItems?.length) {
+                for (const t of context.trashItems) {
+                  if (this.isTrashCell(targetX, targetY, t)) {
+                    const revealedTrashCell = currentDepth > t.depth && after <= t.depth;
+                    if (revealedTrashCell) {
+                      const sx = originX + (targetX + 0.5) * cellWidth;
+                      const sy = originY + (targetY + 0.5) * cellHeight;
+                      context.onTrashCellRevealed?.(t, sx, sy);
+                    }
+                  }
+                }
               }
             }
           }
@@ -97,6 +112,22 @@ export class BrushTool implements Tool {
     // Visual and audio feedback
     this.showBrushEffect(x, y, context);
     this.triggerHaptic();
+  }
+
+  private isTrashCell(
+    x: number,
+    y: number,
+    trash: { position: { x: number; y: number }; width: number; height: number }
+  ): boolean {
+    const { position, width, height } = trash;
+    const cx = position.x + width / 2;
+    const cy = position.y + height / 2;
+    const radius = Math.min(width, height) / 2;
+    const cellCx = x + 0.5;
+    const cellCy = y + 0.5;
+    const dx = cellCx - cx;
+    const dy = cellCy - cy;
+    return dx * dx + dy * dy <= radius * radius;
   }
 
   private createDustParticle(x: number, y: number): void {

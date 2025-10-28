@@ -115,10 +115,9 @@ export const createPostB = async (userId?: string) => {
   const post = (await reddit.submitCustomPost({
     entrypoint: 'typeB',
     splash: {
-      appDisplayName: `Your Museum`,
-      heading: `Your Museum`,
-      description: `Your Unique Collection of discovered artifacts \n\n \u26B1\uFE0E`,
-      buttonLabel: 'Enter Museum',
+      appDisplayName: `The Museum`,
+      heading: `The Museum`,
+      buttonLabel: 'Enter',
       backgroundUri: 'museum-post-background.png',
       appIconUri: 'museum-icon.png',
     },
@@ -137,9 +136,17 @@ export const createPostB = async (userId?: string) => {
       lastUpdatedAt: Date.now(),
     },
     subredditName: subredditName,
-    title: `Your Museum`,
+    title: `The Museum`,
   } as any)) as any;
   console.log('PostB created:', post.id);
+
+  // Make the museum post sticky/pinned
+  try {
+    await post.sticky(1);
+    console.log('Museum post pinned successfully');
+  } catch (err) {
+    console.warn("Unable to pin museum post:", err);
+  }
 
   // Store post type in Redis for later retrieval
   await redis.set(`post:${post.id}:type`, 'typeB');

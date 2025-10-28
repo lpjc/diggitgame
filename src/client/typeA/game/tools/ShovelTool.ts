@@ -111,6 +111,20 @@ export class ShovelTool implements Tool {
                 damagedCells.push({ x: targetX, y: targetY });
               }
             }
+
+            // Detect trash reveal on threshold crossing and notify manager for messaging
+            if (context.trashItems?.length) {
+              for (const t of context.trashItems) {
+                if (this.isTrashCell(targetX, targetY, t)) {
+                  const revealedTrashCell = before > t.depth && after <= t.depth;
+                  if (revealedTrashCell) {
+                    const sx = originX + (targetX + 0.5) * cellWidth;
+                    const sy = originY + (targetY + 0.5) * cellHeight;
+                    context.onTrashCellRevealed?.(t, sx, sy);
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -157,6 +171,22 @@ export class ShovelTool implements Tool {
   ): boolean {
     // Match the renderer's circular artifact for hit detection
     const { position, width, height } = artifact;
+    const cx = position.x + width / 2;
+    const cy = position.y + height / 2;
+    const radius = Math.min(width, height) / 2;
+    const cellCx = x + 0.5;
+    const cellCy = y + 0.5;
+    const dx = cellCx - cx;
+    const dy = cellCy - cy;
+    return dx * dx + dy * dy <= radius * radius;
+  }
+
+  private isTrashCell(
+    x: number,
+    y: number,
+    trash: { position: { x: number; y: number }; width: number; height: number }
+  ): boolean {
+    const { position, width, height } = trash;
     const cx = position.x + width / 2;
     const cy = position.y + height / 2;
     const radius = Math.min(width, height) / 2;
@@ -290,7 +320,7 @@ export class ShovelTool implements Tool {
     }
   }
 
-  private readonly FLOATING_TEXT_LIFE = 3200;
+  private readonly FLOATING_TEXT_LIFE = 6400;
   private spawnFloatingText(x: number, y: number, text: string): void {
     this.floatingTexts.push({ x, y, text, life: this.FLOATING_TEXT_LIFE, vy: 0.35 });
   }

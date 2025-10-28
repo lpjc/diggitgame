@@ -9,7 +9,7 @@ import {
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 // Job: Server routes for app; creates posts; serves digsite/museum APIs; mirrors dynamic stats to postData and text fallback where possible
 import { createPostA, createPostB } from './core/post';
-import { getRecommendedSubreddits } from './core/subreddit-picker';
+import { getRecommendedSubreddits, getRandomSubreddit } from './core/subreddit-picker';
 import { getDataFeed } from './core/data';
 import { createUserPost, createUserComment } from './core/userActions';
 import { getDigSiteData, getCommunityStats, getDepthForPost, getNextDepth, getThreshold } from './core/digsite';
@@ -267,6 +267,13 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
       let artifact: ArtifactData;
       
       if (isRelic) {
+        // Pick a different subreddit to unlock (avoid current target)
+        let relicSub = await getRandomSubreddit(0.6, 'surface');
+        let guard = 0;
+        while (relicSub.toLowerCase() === targetSubreddit.toLowerCase() && guard++ < 5) {
+          relicSub = await getRandomSubreddit(0.6, 'surface');
+        }
+        const relicTheme = await getSubredditTheme(relicSub);
         artifact = {
           type: 'subreddit_relic',
           position: {
@@ -276,7 +283,7 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
           depth: 40 + Math.floor(Math.random() * 20),
           width: 20,
           height: 20,
-          relic: theme,
+          relic: relicTheme,
         };
       } else {
         const depthLevel = (await getDepthForPost(postId)) || 'surface';
@@ -692,6 +699,59 @@ router.post('/api/relic/claim', async (req, res): Promise<void> => {
     res.status(500).json({
       status: 'error',
       message: error instanceof Error ? error.message : 'Failed to claim relic',
+    });
+  }
+});
+
+// Test helper: moderator menu action → open new dig site as USER and comment on current post
+router.post('/internal/menu/relic-spawn-test', async (req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    const userId = username || 'anonymous';
+    const { postId: sourcePostId } = (req.body || {}) as { postId?: string };
+    const currentPostId = sourcePostId || context.postId;
+
+    if (!currentPostId) {
+      res.status(400).json({ status: 'error', message: 'postId is required' });
+      return;
+    }
+
+    const currentTarget = await redis.get(`digsite:${currentPostId}:target`);
+    const currentTargetSub = (currentTarget || 'askreddit').toLowerCase();
+
+    // Pick a different subreddit for the new dig site
+    let target = await getRandomSubreddit(0.6, 'surface');
+    let guard = 0;
+    while (target.toLowerCase() === currentTargetSub && guard++ < 5) {
+      target = await getRandomSubreddit(0.6, 'surface');
+    }
+
+    const { getOrCreateDigSiteForSubredditDepth } = await import('./core/digsite');
+    const result = await getOrCreateDigSiteForSubredditDepth(target, 'surface');
+    const digPostId = result.postId;
+
+    // Post a comment on the source dig site under USER
+    try {
+      await reddit.submitComment({
+        runAs: 'USER',
+        postId: currentPostId,
+        text: `I found a treasure map to the ancient ruins of r/${target}. Come explore with me here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
+      } as any);
+    } catch (commentErr) {
+      console.warn('relic-spawn-test: comment failed', commentErr);
+    }
+
+    res.json({
+      success: true,
+      newDigSiteId: digPostId,
+      targetSubreddit: target,
+      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
+    });
+  } catch (error) {
+    console.error('Error in relic-spawn-test:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to spawn test dig site',
     });
   }
 });

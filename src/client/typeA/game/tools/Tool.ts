@@ -1,4 +1,5 @@
-// Job: Define the tool contracts and shared context passed to tools (grid, canvas, helpers)
+// Job: Define tool contracts and the shared context passed to tools, including
+// grid/canvas mapping and callbacks for global overlays (e.g., floating text)
 import { DirtLayer, ArtifactData, TrashItem } from '../../../../shared/types/game';
 
 export interface ToolContext {
@@ -15,6 +16,8 @@ export interface ToolContext {
   originY: number;
   onArtifactDamage?: () => void;
   onArtifactBreak?: () => void;
+  // Notify the manager that a trash cell has been revealed; manager handles first/50% messaging
+  onTrashCellRevealed?: (trash: TrashItem, screenX: number, screenY: number) => void;
 }
 
 export interface Tool {

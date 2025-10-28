@@ -1,4 +1,4 @@
-// Job: Client entry for Type A dig experience; wires engine, tools, UI, and ensures viewport-fit canvas
+// Job: Client entry for Type A dig experience; wires engine, tools, UI, viewport-fit canvas, and manages discovery modal with floating reveal and community progress
 import { useEffect, useState, useRef } from 'react';
 import { fetchAPI } from '../shared/utils/api';
 import { DigSiteData } from '../../shared/types/game';
@@ -25,7 +25,7 @@ export const App = () => {
   const [celebration, setCelebration] = useState<{ show: boolean; stage: 'idle'|'pulse'|'linger' }>(() => ({ show: false, stage: 'idle' }));
   const [claiming, setClaiming] = useState(false);
   const [localFound, setLocalFound] = useState<number | null>(null);
-  const [plusOne, setPlusOne] = useState(false);
+  
   
   const gameEngineRef = useRef<GameEngine | null>(null);
   const toolManagerRef = useRef<ToolManager | null>(null);
@@ -244,11 +244,7 @@ export const App = () => {
         console.log(`Artifact saved! Rarity: ${response.rarityTier}, Found by ${response.foundByCount} players`);
         setArtifactAdded(true);
 
-        if (!artifactSystemRef.current.isBrokenState() && digSiteData.artifact.type === 'post') {
-          setLocalFound((prev) => (prev == null ? (digSiteData.depthProgress?.found || 0) + 1 : prev + 1));
-          setPlusOne(true);
-          setTimeout(() => setPlusOne(false), 900);
-        }
+        // Progress tick now happens on reveal inside DiscoveryModal
       }
 
       // Update community and player stats, and mirror to postData
@@ -306,30 +302,7 @@ export const App = () => {
 
       {gameStarted && <ToolDock activeTool={activeTool} onToolSelect={handleToolSelect} />}
 
-      {/* Depth Progress HUD */}
-      {digSiteData?.depthProgress && (
-        <div className="absolute left-2 bottom-2 bg-black/60 text-white rounded-lg px-3 py-2 text-xs relative">
-          {digSiteData.depthProgress.threshold != null && (
-            <div className="w-48 h-2 bg-white/20 rounded overflow-hidden">
-              <div className="h-full bg-orange-400" style={{ width: `${(() => {
-                const found = localFound ?? digSiteData.depthProgress.found;
-                const threshold = digSiteData.depthProgress.threshold || 1;
-                return Math.min(100, Math.floor((found / threshold) * 100));
-              })()}%` }} />
-            </div>
-          )}
-          {digSiteData.depthProgress.threshold != null && (
-            <div className="mt-1 opacity-80">Artifacts until next depth: {(() => {
-              const found = localFound ?? digSiteData.depthProgress.found;
-              const threshold = digSiteData.depthProgress.threshold || 0;
-              return Math.max(0, threshold - found);
-            })()}</div>
-          )}
-          {plusOne && (
-            <div style={{ position: 'absolute', right: '6px', top: '-4px', color: '#FDBA74', fontWeight: 700, fontSize: '12px', animation: 'float-up 0.9s ease-out forwards' }}>+1</div>
-          )}
-        </div>
-      )}
+      {/* Progress HUD moved inside DiscoveryModal under revealed post */}
 
       {showDiscovery && digSiteData && (
         <DiscoveryModal
@@ -339,6 +312,13 @@ export const App = () => {
           onFindMore={() => window.location.reload()}
           onViewMuseum={() => console.log('Navigate to museum')}
           isAdded={artifactAdded}
+          initialFound={localFound ?? digSiteData.depthProgress?.found ?? 0}
+          threshold={digSiteData.depthProgress?.threshold ?? null}
+          onRevealed={() => {
+            if (digSiteData.depthProgress?.threshold != null) {
+              setLocalFound((prev) => (prev == null ? (digSiteData.depthProgress?.found || 0) + 1 : prev + 1));
+            }
+          }}
         />
       )}
 

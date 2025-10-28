@@ -33,11 +33,18 @@
         "endpoint": "/internal/menu/create-post-a"
       },
       {
-        "label": "Create PostB",
+        "label": "Create PostBB",
         "description": "Create a Type B game post",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/create-post-b"
+      },
+      {
+        "label": "Open new dig site as me",
+        "description": "Create a new dig site for another subreddit and comment on this post",
+        "location": "post",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/relic-spawn-test"
       }
     ]
   },
