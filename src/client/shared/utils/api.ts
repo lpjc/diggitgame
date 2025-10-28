@@ -31,3 +31,13 @@ export async function fetchAPI<T>(endpoint: string, options?: RequestInit): Prom
     throw new APIError('Network request failed', 0);
   }
 }
+
+export async function fetchSubredditIcon(subredditName: string): Promise<string> {
+  try {
+    const response = await fetchAPI<{ success: boolean; iconUrl: string }>(`/api/subreddit-icon/${subredditName}`);
+    return response.iconUrl;
+  } catch (error) {
+    console.warn(`Failed to fetch icon for r/${subredditName}:`, error);
+    return 'default-icon.png';
+  }
+}

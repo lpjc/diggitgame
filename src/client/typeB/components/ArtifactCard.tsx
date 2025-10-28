@@ -3,11 +3,13 @@
 // - Used in large grid views; clicking opens detail overlay in parent.
 // - Image thumbnails are intentionally omitted per design.
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArtifactWithPlayerData } from '../../../shared/types/artifact';
 // Note: Badges are NOT shown on the card itself (they live on plaques)
 // Keeping imports local to avoid unused imports
 import { formatNumber } from '../utils/dateCalculator';
+import { fetchSubredditIcon } from '../../shared/utils/api';
+import { navigateTo } from '@devvit/web/client';
 
 interface ArtifactCardProps {
   artifact: ArtifactWithPlayerData;
@@ -21,10 +23,40 @@ export const ArtifactCard: React.FC<ArtifactCardProps> = ({
   artifact,
   onClick,
 }) => {
+  const handleCardClick = () => {
+    // If there's a Reddit post permalink, navigate to it
+    if (artifact.redditPost?.permalink) {
+      navigateTo(`https://reddit.com${artifact.redditPost.permalink}`);
+    } else {
+      // Fallback to the provided onClick handler
+      onClick();
+    }
+  };
+  const [subredditIconUrl, setSubredditIconUrl] = useState<string>('/snoo.png');
 
-  // Prefer subreddit icon from relic data; fallback to local Snoo icon
-  const subredditIconUrl =
-    artifact.subredditRelic?.iconUrl || '/snoo.png';
+  // Fetch subreddit icon for post artifacts
+  useEffect(() => {
+    const loadSubredditIcon = async () => {
+      // For subreddit relics, use the stored iconUrl
+      if (artifact.type === 'subreddit_relic' && artifact.subredditRelic?.iconUrl) {
+        setSubredditIconUrl(artifact.subredditRelic.iconUrl);
+        return;
+      }
+
+      // For post artifacts, fetch the icon dynamically
+      if (artifact.type === 'post') {
+        try {
+          const iconUrl = await fetchSubredditIcon(artifact.subredditOfOrigin);
+          setSubredditIconUrl(iconUrl);
+        } catch (error) {
+          console.warn(`Failed to load icon for r/${artifact.subredditOfOrigin}:`, error);
+          setSubredditIconUrl('/snoo.png');
+        }
+      }
+    };
+
+    loadSubredditIcon();
+  }, [artifact.type, artifact.subredditOfOrigin, artifact.subredditRelic?.iconUrl]);
 
   const titleText =
     artifact.type === 'post'
@@ -44,7 +76,7 @@ export const ArtifactCard: React.FC<ArtifactCardProps> = ({
     <div
       className="flex w-[180px] max-w-[180px] flex-col gap-1.5 rounded-[10px] bg-white p-2 font-['Inter',_sans-serif] shadow hover:shadow-lg cursor-pointer"
       style={{ fontFeatureSettings: 'normal' }}
-      onClick={onClick}
+      onClick={handleCardClick}
     >
       {/* Header */}
       <div className="flex items-center gap-2">
@@ -79,16 +111,18 @@ export const ArtifactCard: React.FC<ArtifactCardProps> = ({
             </div>
           </div>
           {artifact.redditPost?.permalink && (
-            <a
-              href={`https://reddit.com${artifact.redditPost.permalink}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
               className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
-              onClick={(e) => e.stopPropagation()}
-            >     
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateTo(`https://reddit.com${artifact.redditPost!.permalink}`);
+              }}
+              aria-label="Open on Reddit"
+            >
               {/* Open in new window icon */}
               <img src="/icon/for-cards/open-new-icon-grey.png" className="w-4 h-4" />
-            </a>
+            </button>
           )}
         </div>
       </div>

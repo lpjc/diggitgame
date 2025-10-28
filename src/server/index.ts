@@ -756,6 +756,46 @@ router.post('/internal/menu/relic-spawn-test', async (req, res): Promise<void> =
   }
 });
 
+// Get subreddit icon
+router.get('/api/subreddit-icon/:subredditName', async (req, res): Promise<void> => {
+  try {
+    const { subredditName } = req.params;
+    
+    if (!subredditName) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Subreddit name is required',
+      });
+      return;
+    }
+
+    let iconUrl = 'default-icon.png';
+    try {
+      const subredditInfo = await reddit.getSubredditInfoByName(subredditName);
+      if (subredditInfo.id) {
+        const styles = await reddit.getSubredditStyles(subredditInfo.id);
+        if (styles.icon) {
+          iconUrl = styles.icon;
+          console.log(`Using subreddit icon for r/${subredditName}: ${iconUrl}`);
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch icon for r/${subredditName}, using default:`, error);
+    }
+    
+    res.json({
+      success: true,
+      iconUrl,
+    });
+  } catch (error) {
+    console.error('Error getting subreddit icon:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Failed to get subreddit icon',
+    });
+  }
+});
+
 // Get recommended subreddits for the player
 router.get('/api/recommended-subreddits', async (req, res): Promise<void> => {
   try {

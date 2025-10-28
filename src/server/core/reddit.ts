@@ -63,8 +63,73 @@ export async function fetchHistoricalPost(subredditName: string, age?: AgeRange)
     // Select a random post
     const randomPost = eligiblePosts[Math.floor(Math.random() * eligiblePosts.length)];
 
+    // Debug: Log the post structure to understand available fields
+    console.log('Random post structure:', {
+      id: randomPost!.id,
+      title: randomPost!.title,
+      score: randomPost!.score,
+      numComments: (randomPost as any).numComments,
+      commentCount: (randomPost as any).commentCount,
+      totalComments: (randomPost as any).totalComments,
+      comments: (randomPost as any).comments,
+      num_comments: (randomPost as any).num_comments,
+      allKeys: Object.keys(randomPost!),
+      fullPost: randomPost,
+    });
+
     const thumbnailUrl = randomPost!.thumbnail?.url;
     const textSnippet = randomPost!.body?.substring(0, 200);
+    
+    // Try multiple possible field names for comment count
+    let commentCount: number | undefined;
+    const post = randomPost as any;
+    if (typeof post.numberOfComments === 'number') {
+      commentCount = post.numberOfComments;
+    } else if (typeof post.numComments === 'number') {
+      commentCount = post.numComments;
+    } else if (typeof post.commentCount === 'number') {
+      commentCount = post.commentCount;
+    } else if (typeof post.totalComments === 'number') {
+      commentCount = post.totalComments;
+    } else if (typeof post.comments === 'number') {
+      commentCount = post.comments;
+    } else if (typeof post.num_comments === 'number') {
+      commentCount = post.num_comments;
+    } else if (typeof post.comment_count === 'number') {
+      commentCount = post.comment_count;
+    }
+    
+    console.log('Comment count detection result:', { commentCount, foundField: commentCount !== undefined });
+    
+    // If comment count is still missing, try to fetch individual post details
+    if (commentCount === undefined) {
+      try {
+        console.log('Attempting to fetch individual post details for comment count...');
+        const individualPost = await reddit.getPostById(randomPost!.id);
+        const individualPostAny = individualPost as any;
+        
+        // Try the same field names on the individual post
+        if (typeof individualPostAny.numberOfComments === 'number') {
+          commentCount = individualPostAny.numberOfComments;
+        } else if (typeof individualPostAny.numComments === 'number') {
+          commentCount = individualPostAny.numComments;
+        } else if (typeof individualPostAny.commentCount === 'number') {
+          commentCount = individualPostAny.commentCount;
+        } else if (typeof individualPostAny.totalComments === 'number') {
+          commentCount = individualPostAny.totalComments;
+        } else if (typeof individualPostAny.comments === 'number') {
+          commentCount = individualPostAny.comments;
+        } else if (typeof individualPostAny.num_comments === 'number') {
+          commentCount = individualPostAny.num_comments;
+        } else if (typeof individualPostAny.comment_count === 'number') {
+          commentCount = individualPostAny.comment_count;
+        }
+        
+        console.log('Individual post comment count result:', { commentCount, individualPostKeys: Object.keys(individualPostAny) });
+      } catch (error) {
+        console.warn('Failed to fetch individual post details:', error);
+      }
+    }
     
     const redditPost: RedditPost = {
       id: randomPost!.id,
@@ -73,7 +138,7 @@ export async function fetchHistoricalPost(subredditName: string, age?: AgeRange)
       subreddit: subredditName,
       createdAt: randomPost!.createdAt.getTime(),
       score: randomPost!.score,
-      ...(typeof (randomPost as any).numComments === 'number' && { commentCount: (randomPost as any).numComments }),
+      ...(commentCount !== undefined && { commentCount }),
       ...(thumbnailUrl && { thumbnailUrl }),
       ...(textSnippet && { textSnippet }),
       permalink: randomPost!.permalink,
