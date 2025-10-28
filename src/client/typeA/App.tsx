@@ -321,12 +321,6 @@ export const App = () => {
           }}
         />
       )}
-
-      {claiming && (
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-md px-4 py-3 text-sm font-semibold">Claiming...</div>
-        </div>
-      )}
     </div>
   );
 };

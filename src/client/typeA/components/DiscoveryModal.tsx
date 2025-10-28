@@ -1,5 +1,6 @@
 // Job: Floating discovery overlay for Type A; handles nugget reveal animation, shows revealed post using the museum ArtifactCard, and renders community progress with +1 tick under the post
 import React, { useEffect, useState } from 'react';
+import { navigateTo } from '@devvit/web/client';
 import { ArtifactData } from '../../../shared/types/game';
 import { ArtifactCard } from '../../typeB/components/ArtifactCard';
 import type { ArtifactWithPlayerData } from '../../../shared/types/artifact';
@@ -21,7 +22,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
   isBroken,
   onAddToMuseum,
   onFindMore,
-  onViewMuseum,
+  onViewMuseum: _onViewMuseum,
   isAdded,
   initialFound = 0,
   threshold = null,
@@ -36,6 +37,8 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
   const [showCurtain, setShowCurtain] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
   const [uiReady, setUiReady] = useState(false);
+  const [autoAdded, setAutoAdded] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   useEffect(() => {
     if (!isBroken) {
@@ -201,37 +204,49 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
               )}
 
               {/* Actions */}
-              {!isAdded ? (
-                <div className="flex items-center gap-2 pt-2" style={{ opacity: uiReady ? 1 : 0, transition: 'opacity 300ms ease' }}>
-                  <button
-                    onClick={onAddToMuseum}
-                    className="px-4 py-2 rounded-md bg-orange-500/90 hover:bg-orange-500 text-white text-sm font-semibold"
-                  >
-                    Claim!
-                  </button>
-                  <button
-                    onClick={onFindMore}
-                    className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-semibold"
-                  >
-                    Find more
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 pt-2" style={{ opacity: uiReady ? 1 : 0, transition: 'opacity 300ms ease' }}>
-                  <button
-                    onClick={onFindMore}
-                    className="px-4 py-2 rounded-md bg-blue-500/90 hover:bg-blue-500 text-white text-sm font-semibold"
-                  >
-                    Find more artifacts!
-                  </button>
-                  <button
-                    onClick={onViewMuseum}
-                    className="px-4 py-2 rounded-md bg-purple-500/90 hover:bg-purple-500 text-white text-sm font-semibold"
-                  >
-                    Go to Museum
-                  </button>
-                </div>
-              )}
+              <div className="flex flex-col items-center gap-2 pt-2" style={{ opacity: uiReady ? 1 : 0, transition: 'opacity 300ms ease' }}>
+                {!(isAdded || autoAdded) ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (isClaiming) return;
+                        setIsClaiming(true);
+                        try {
+                          await Promise.resolve(onAddToMuseum());
+                          setAutoAdded(true);
+                        } finally {
+                          setIsClaiming(false);
+                        }
+                      }}
+                      disabled={isClaiming}
+                      className={`px-4 py-2 rounded-md text-white text-sm font-semibold ${isClaiming ? 'bg-orange-500/50 cursor-not-allowed' : 'bg-orange-500/90 hover:bg-orange-500'}`}
+                    >
+                      {isClaiming ? 'Claiming...' : 'Claim!'}
+                    </button>
+                    <button
+                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/new/')}
+                      className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-semibold"
+                    >
+                      Explore More
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/new/')}
+                      className="px-4 py-2 rounded-md bg-orange-500/90 hover:bg-orange-500 text-white text-sm font-semibold"
+                    >
+                      Go to Museum
+                    </button>
+                    <button
+                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/new/')}
+                      className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-semibold"
+                    >
+                      Explore More
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -268,10 +283,20 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
 
           {!isAdded ? (
             <button
-              onClick={onAddToMuseum}
-              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 rounded-md transition-colors text-sm"
+              onClick={async () => {
+                if (isClaiming) return;
+                setIsClaiming(true);
+                try {
+                  await Promise.resolve(onAddToMuseum());
+                  setAutoAdded(true);
+                } finally {
+                  setIsClaiming(false);
+                }
+              }}
+              disabled={isClaiming}
+              className={`w-full text-white font-semibold py-2 rounded-md transition-colors text-sm ${isClaiming ? 'bg-cyan-600/60 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-700'}`}
             >
-              Open new dig site as me
+              {isClaiming ? 'Adding to museum...' : 'Open new dig site as me'}
             </button>
           ) : (
             <div className="space-y-2">
@@ -282,8 +307,8 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                 Explore New Site
               </button>
               <button
-                onClick={onViewMuseum}
-                className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 rounded-md transition-colors text-sm"
+                onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/comments/1oi49ga/the_museum/')}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors text-sm"
               >
                 View Your Museum
               </button>
