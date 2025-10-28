@@ -32,6 +32,10 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
   const [phase, setPhase] = useState<'sink' | 'nugget' | 'revealed'>(isBroken ? 'nugget' : 'sink');
   const [displayFound, setDisplayFound] = useState<number>(initialFound);
   const [showPlusOne, setShowPlusOne] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
+  const [showCurtain, setShowCurtain] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [uiReady, setUiReady] = useState(false);
 
   useEffect(() => {
     if (!isBroken) {
@@ -56,6 +60,34 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
           @keyframes circle-enter { from { opacity: 0; transform: translateY(28px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
           @keyframes content-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes float-up { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-12px); } }
+          @keyframes split-left { to { transform: translateX(calc(-1 * var(--split-distance, 160px))); opacity: 0; } }
+          @keyframes split-right { to { transform: translateX(var(--split-distance, 160px)); opacity: 0; } }
+          @keyframes card-reveal { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+          @keyframes radial-reveal { from { clip-path: circle(0px at 50% 56px); } to { clip-path: circle(180% at 50% 56px); } }
+
+          .reveal-shell {
+            position: relative;
+            width: var(--circle-size, 112px);
+            height: var(--circle-size, 112px);
+            cursor: pointer;
+          }
+          .reveal-shell .half {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: calc(var(--circle-size, 112px) / 2 + 1px);
+            height: 100%;
+            background: #FFD700;
+            box-shadow: 0 10px 22px rgba(255,193,7,0.45), inset 0 0 0 1px rgba(255,255,255,0.7);
+          }
+          .reveal-shell .half.right { left: auto; right: 0; }
+          .reveal-shell .half.left { border-top-left-radius: 9999px; border-bottom-left-radius: 9999px; }
+          .reveal-shell .half.right { border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; }
+          .reveal-shell.opening .half.left { animation: split-left 1000ms cubic-bezier(.2,.8,.2,1) forwards; }
+          .reveal-shell.opening .half.right { animation: split-right 1000ms cubic-bezier(.2,.8,.2,1) forwards; }
+          .card-appear { animation: card-reveal 650ms 120ms ease-out both; }
+          .curtain-overlay { position: absolute; left: 50%; transform: translateX(-50%); top: 0; pointer-events: none; z-index: 10; }
+          .card-reveal-mask { /* no default clip to ensure post is visible when not animating */ }
+          .card-reveal-mask.revealing { animation: radial-reveal 1000ms cubic-bezier(.2,.8,.2,1) both; }
         `}</style>
         <div className="max-w-sm w-[340px]" style={{ animation: 'content-fade 520ms ease-out' }}>
           {isBroken ? (
@@ -76,23 +108,33 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                 !showNugget ? null : (
                   <div className="flex flex-col items-center gap-3">
                     <div
+                      className="reveal-shell"
+                      style={{ ['--circle-size' as any]: '112px', ['--split-distance' as any]: '160px', animation: 'circle-enter 700ms cubic-bezier(.2,.8,.2,1)' } as React.CSSProperties}
                       onClick={() => {
                         setRevealed(true);
+                        setIsOpening(true);
+                        setShowCurtain(true);
+                        setIsRevealing(true);
+                        setUiReady(false);
+                        // Let the reveal animation take center stage; update progress after
                         setTimeout(() => {
                           setDisplayFound((f) => f + 1);
                           setShowPlusOne(true);
-                          setTimeout(() => setShowPlusOne(false), 1200);
-                        }, 200);
+                          setTimeout(() => setShowPlusOne(false), 1400);
+                        }, 1200);
                         onRevealed?.();
-                      }}
-                      className="w-28 h-28 rounded-full cursor-pointer"
-                      style={{
-                        background: '#FFD700',
-                        boxShadow: '0 10px 22px rgba(255,193,7,0.45), inset 0 0 0 1px rgba(255,255,255,0.7)',
-                        animation: 'circle-enter 700ms cubic-bezier(.2,.8,.2,1)'
+                        setTimeout(() => {
+                          setShowCurtain(false);
+                          setIsOpening(false);
+                          setIsRevealing(false);
+                          setUiReady(true);
+                        }, 1100);
                       }}
                       title={`Tap to reveal a historical artifact from r/${artifact.post.subreddit}`}
-                    />
+                    >
+                      <div className="half left" />
+                      <div className="half right" />
+                    </div>
                     <p className="text-sm text-white/95 font-semibold drop-shadow">Tap to reveal a historical artifact from r/{artifact.post.subreddit}</p>
                   </div>
                 )
@@ -103,8 +145,12 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
           {(!isBroken && revealed) && (
             <div className="mt-4 space-y-3">
               {/* Revealed post using exact museum ArtifactCard */}
-              <div className="mb-2">
-                <ArtifactCard
+              <div className="mb-2 relative card-appear">
+                <div
+                  className={`card-reveal-mask ${isRevealing ? 'revealing' : ''}`}
+                  style={{ display: 'flex', justifyContent: 'center' }}
+                >
+                  <ArtifactCard
                   artifact={{
                     artifactId: 'temp',
                     type: 'post',
@@ -118,16 +164,26 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                   } as unknown as ArtifactWithPlayerData}
                   onClick={() => {}}
                   isFirstDiscovery={false}
-                />
+                  />
+                </div>
+                {showCurtain && (
+                  <div
+                    className={`curtain-overlay`}
+                    style={{ ['--circle-size' as any]: '112px', ['--split-distance' as any]: '140px', width: '112px', height: '112px' } as React.CSSProperties}
+                  >
+                    <div className={`reveal-shell ${isOpening ? 'opening' : ''}`} style={{ ['--circle-size' as any]: '112px' } as React.CSSProperties}>
+                      <div className="half left" />
+                      <div className="half right" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Progress under the revealed post */}
               {threshold != null && (
-                <div className="text-white text-xs">
-                  <div className="flex items-center gap-2 relative">
-                    <div className="min-w-[44px] text-right tabular-nums">
-                      {displayFound}/{threshold}
-                    </div>
+                <div className="text-white text-xs flex flex-col items-center" style={{ opacity: uiReady ? 1 : 0, transition: 'opacity 300ms ease' }}>
+                  <div className="tabular-nums mb-1">{displayFound}/{threshold}</div>
+                  <div className="relative">
                     <div className="w-48 h-2 bg-white/20 rounded overflow-hidden">
                       <div
                         className="h-full bg-orange-400 transition-[width] duration-500"
@@ -135,10 +191,10 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                       />
                     </div>
                     {showPlusOne && (
-                      <div style={{ position: 'absolute', left: '-6px', top: '-10px', color: '#FDBA74', fontWeight: 700, fontSize: '12px', animation: 'float-up 1.1s ease-out forwards' }}>+1</div>
+                      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '-14px', color: '#FDBA74', fontWeight: 700, fontSize: '12px', animation: 'float-up 1.1s ease-out forwards' }}>+1</div>
                     )}
                   </div>
-                  <div className="mt-2 text-[11px] leading-snug opacity-90">
+                  <div className="mt-2 text-[11px] leading-snug opacity-90 text-center">
                     Community goal to unlock next depth for r/{artifact.post.subreddit}
                   </div>
                 </div>
@@ -146,7 +202,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
 
               {/* Actions */}
               {!isAdded ? (
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-2 pt-2" style={{ opacity: uiReady ? 1 : 0, transition: 'opacity 300ms ease' }}>
                   <button
                     onClick={onAddToMuseum}
                     className="px-4 py-2 rounded-md bg-orange-500/90 hover:bg-orange-500 text-white text-sm font-semibold"
@@ -161,7 +217,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-2 pt-2" style={{ opacity: uiReady ? 1 : 0, transition: 'opacity 300ms ease' }}>
                   <button
                     onClick={onFindMore}
                     className="px-4 py-2 rounded-md bg-blue-500/90 hover:bg-blue-500 text-white text-sm font-semibold"
