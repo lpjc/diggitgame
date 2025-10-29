@@ -665,10 +665,12 @@ router.post('/api/relic/claim', async (req, res): Promise<void> => {
 
     // Post a comment on the source dig site under USER, inviting others
     try {
+      const postThingId = sourcePostId.startsWith('t3_') ? sourcePostId : `t3_${sourcePostId}`;
+      const text = `I found a treasure map to the ancient ruins of r/${subredditName}. Come explore with me here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`;
       await reddit.submitComment({
         runAs: 'USER',
-        postId: sourcePostId,
-        text: `I found a treasure map to the ancient ruins of r/${subredditName}. Come explore with me here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
+        postId: postThingId,
+        text,
       } as any);
     } catch (commentError) {
       console.error('Failed to post discovery comment:', commentError);
@@ -732,10 +734,12 @@ router.post('/internal/menu/relic-spawn-test', async (req, res): Promise<void> =
 
     // Post a comment on the source dig site under USER
     try {
+      const postThingId = currentPostId.startsWith('t3_') ? currentPostId : `t3_${currentPostId}`;
+      const text = `I found a treasure map to the ancient ruins of r/${target}. Come explore with me here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`;
       await reddit.submitComment({
         runAs: 'USER',
-        postId: currentPostId,
-        text: `I found a treasure map to the ancient ruins of r/${target}. Come explore with me here: https://reddit.com/r/${context.subredditName}/comments/${digPostId}`,
+        postId: postThingId,
+        text,
       } as any);
     } catch (commentErr) {
       console.warn('relic-spawn-test: comment failed', commentErr);

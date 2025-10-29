@@ -1,3 +1,4 @@
+// Job: Server helpers for posting as the USER; validates inputs and normalizes thing IDs for submitPost/submitComment with runAs: 'USER'
 import { reddit } from '@devvit/web/server';
 import { UserPostRequest, UserCommentRequest } from '../../shared/types/api';
 
@@ -28,9 +29,11 @@ export const createUserComment = async (request: UserCommentRequest) => {
     throw new Error('PostId and text are required');
   }
 
+  const postThingId = request.postId.startsWith('t3_') ? request.postId : `t3_${request.postId}`;
+  const text = String(request.text);
   return await reddit.submitComment({
     runAs: 'USER',
-    postId: request.postId,
-    text: request.text,
+    postId: postThingId,
+    text,
   });
 };

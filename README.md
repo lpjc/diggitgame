@@ -591,3 +591,4 @@ This project demonstrates advanced Devvit patterns including:
 - Rarity tracking and first discovery system
 
 Feel free to use this as a foundation for your own Reddit games!
+OSI Open Source License.
