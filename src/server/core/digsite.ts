@@ -1,6 +1,8 @@
 import { redis, reddit, context } from '@devvit/web/server';
-import { DigSiteData, CommunityStats, ArtifactData, DepthLevel } from '../../shared/types/game';
+import { DigSiteData, CommunityStats, ArtifactData, DepthLevel, BiomeType, DirtMaterial } from '../../shared/types/game';
 import { createPostA } from './post';
+import { getSubredditTheme, fetchHistoricalPost } from './reddit';
+import { getRandomSubreddit } from './subreddit-picker';
 
 const DIGSITE_PREFIX = 'digsite:';
 const DIGSITE_INDEX_PREFIX = 'digsite:index:'; // digsite:index:r:{subreddit}:depth:{depth} -> postId
@@ -154,6 +156,115 @@ export async function getOrCreateDigSiteForSubredditDepth(subreddit: string, dep
   );
   await setPostMeta(post.id, { targetSubreddit: subreddit, depthLevel: depth, createdAt: Date.now() });
   await redis.set(indexKey, post.id);
+  
+  // Pre-bind artifact and store full dig site data
+  try {
+    const theme = await getSubredditTheme(subreddit);
+
+    // Generate random biome
+    const biomes = [BiomeType.GRASS, BiomeType.ROCK, BiomeType.SAND, BiomeType.SWAMP];
+    const biome = biomes[Math.floor(Math.random() * biomes.length)]!;
+
+    // Generate random dirt materials (2-3 types)
+    const allMaterials = [DirtMaterial.SOIL, DirtMaterial.CLAY, DirtMaterial.GRAVEL, DirtMaterial.MUD];
+    const numMaterials = 2 + Math.floor(Math.random() * 2);
+    const dirtMaterials: DirtMaterial[] = [];
+    for (let i = 0; i < numMaterials; i++) {
+      const material = allMaterials[Math.floor(Math.random() * allMaterials.length)]!;
+      if (!dirtMaterials.includes(material)) {
+        dirtMaterials.push(material);
+      }
+    }
+
+    // Decide artifact (5% relic, 95% post)
+    const isRelic = Math.random() < 0.05;
+    let artifact: ArtifactData;
+
+    if (isRelic) {
+      // Pick a different subreddit to unlock (avoid current target)
+      let relicSub = await getRandomSubreddit(0.6, 'surface');
+      let guard = 0;
+      while (relicSub.toLowerCase() === subreddit.toLowerCase() && guard++ < 5) {
+        relicSub = await getRandomSubreddit(0.6, 'surface');
+      }
+      const relicTheme = await getSubredditTheme(relicSub);
+      artifact = {
+        type: 'subreddit_relic',
+        position: {
+          x: 30 + Math.floor(Math.random() * 40),
+          y: 30 + Math.floor(Math.random() * 40),
+        },
+        depth: 40 + Math.floor(Math.random() * 20),
+        width: 20,
+        height: 20,
+        relic: relicTheme,
+      };
+    } else {
+      const age = (() => {
+        switch (depth) {
+          case 'surface': return { minYears: 0, maxYears: 3 } as const;
+          case 'shallow': return { minYears: 3, maxYears: 6 } as const;
+          case 'deep': return { minYears: 6, maxYears: 9 } as const;
+          case 'deepest': return { minYears: 9 } as const;
+        }
+      })();
+      const postData = await fetchHistoricalPost(subreddit, age);
+      if (!postData) {
+        // Fallback to a relic if no post found to avoid breaking creation
+        let relicSub = await getRandomSubreddit(0.6, 'surface');
+        let guard = 0;
+        while (relicSub.toLowerCase() === subreddit.toLowerCase() && guard++ < 5) {
+          relicSub = await getRandomSubreddit(0.6, 'surface');
+        }
+        const relicTheme = await getSubredditTheme(relicSub);
+        artifact = {
+          type: 'subreddit_relic',
+          position: {
+            x: 30 + Math.floor(Math.random() * 40),
+            y: 30 + Math.floor(Math.random() * 40),
+          },
+          depth: 40 + Math.floor(Math.random() * 20),
+          width: 20,
+          height: 20,
+          relic: relicTheme,
+        };
+      } else {
+        artifact = {
+          type: 'post',
+          position: {
+            x: 30 + Math.floor(Math.random() * 40),
+            y: 30 + Math.floor(Math.random() * 40),
+          },
+          depth: 40 + Math.floor(Math.random() * 20),
+          width: 25,
+          height: 15,
+          post: postData,
+        };
+      }
+    }
+
+    const communityStats: CommunityStats = { artifactsFound: 0, artifactsBroken: 0 };
+    const nextDepth = getNextDepth(depth);
+    const depthProgress = { found: 0, threshold: getThreshold(depth) } as { found: number; threshold: number | null };
+
+    const digSiteData: DigSiteData = {
+      postId: post.id,
+      targetSubreddit: subreddit,
+      biome,
+      dirtMaterials,
+      borderColor: theme.primaryColor,
+      artifact,
+      communityStats,
+      depthLevel: depth,
+      nextDepth,
+      depthProgress,
+      ...(theme.iconUrl && { subredditIconUrl: theme.iconUrl }),
+    };
+
+    await storeDigSiteData(post.id, digSiteData);
+  } catch (e) {
+    console.warn('Failed to pre-bind dig site data at creation', e);
+  }
   return { postId: post.id, created: true };
 }
 

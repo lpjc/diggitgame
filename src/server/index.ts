@@ -12,7 +12,7 @@ import { createPostA, createPostB } from './core/post';
 import { getRecommendedSubreddits, getRandomSubreddit } from './core/subreddit-picker';
 import { getDataFeed } from './core/data';
 import { createUserPost, createUserComment } from './core/userActions';
-import { getDigSiteData, getCommunityStats, getDepthForPost, getNextDepth, getThreshold } from './core/digsite';
+import { getDigSiteData, getCommunityStats, getDepthForPost, getNextDepth, getThreshold, storeDigSiteData } from './core/digsite';
 import { fetchHistoricalPost, getSubredditTheme } from './core/reddit';
 import { getPlayerStats, addArtifactToMuseum, unlockSubreddit } from './core/museum';
 import { BiomeType, DirtMaterial, ArtifactData, CollectedArtifact } from '../shared/types/game';
@@ -335,6 +335,8 @@ router.get('/api/digsite/:postId', async (req, res): Promise<void> => {
         depthProgress,
         ...(theme.iconUrl && { subredditIconUrl: theme.iconUrl }),
       };
+      // Persist once for this dig site so artifact is bound to postId (compat fallback)
+      await storeDigSiteData(postId, digSiteData);
     }
 
     res.json(digSiteData);

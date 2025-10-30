@@ -2,6 +2,7 @@
 import { reddit } from '@devvit/web/server';
 import { UserPostRequest, UserCommentRequest } from '../../shared/types/api';
 
+
 export const createUserPost = async (request: UserPostRequest) => {
   if (!request.title || !request.content || !request.subredditName) {
     throw new Error('Title, content, and subredditName are required');

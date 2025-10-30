@@ -31,7 +31,13 @@ export async function fetchHistoricalPost(subredditName: string, age?: AgeRange)
     const cachedData = await redis.get(cacheKey);
     
     if (cachedData) {
-      return JSON.parse(cachedData);
+      const parsed = JSON.parse(cachedData) as RedditPost;
+      const lowerSub = subredditName.toLowerCase();
+      const permalinkOk = typeof parsed.permalink === 'string' && parsed.permalink.toLowerCase().includes(`/r/${lowerSub}/`);
+      const fieldOk = typeof parsed.subreddit === 'string' && parsed.subreddit.toLowerCase() === lowerSub;
+      if (permalinkOk || fieldOk) {
+        return parsed;
+      }
     }
 
     // Fetch top posts from the subreddit
@@ -41,10 +47,11 @@ export async function fetchHistoricalPost(subredditName: string, age?: AgeRange)
       limit: 100,
     }).all();
 
-    // Filter posts by age range with engagement
+    // Filter posts by age range with engagement and exact subreddit match
     const now = Date.now();
     const minMs = (age?.minYears ?? 0) * 365 * 24 * 60 * 60 * 1000;
     const maxMs = (age?.maxYears ?? 1000) * 365 * 24 * 60 * 60 * 1000; // 1000y sentinel
+    const targetLower = subredditName.toLowerCase();
     const eligiblePosts = posts.filter((post) => {
       const createdMs = post.createdAt.getTime();
       const ageMs = now - createdMs;
@@ -52,7 +59,12 @@ export async function fetchHistoricalPost(subredditName: string, age?: AgeRange)
       // Also ensure older than 6 months for quality, unless minYears==0
       const olderThanSixMonths = createdMs < SIX_MONTHS_AGO;
       const ageGate = (age?.minYears ?? 0) === 0 ? true : olderThanSixMonths;
-      return within && ageGate && post.score > 10;
+      const p: any = post;
+      const fieldSub: string | undefined = (p.subredditName ?? p.subreddit);
+      const fieldMatch = typeof fieldSub === 'string' && fieldSub.toLowerCase() === targetLower;
+      const permalinkMatch = typeof post.permalink === 'string' && post.permalink.toLowerCase().includes(`/r/${targetLower}/`);
+      const matchesSubreddit = fieldMatch || permalinkMatch;
+      return within && ageGate && post.score > 10 && matchesSubreddit;
     });
 
     if (eligiblePosts.length === 0) {
@@ -131,11 +143,16 @@ export async function fetchHistoricalPost(subredditName: string, age?: AgeRange)
       }
     }
     
+    const pAny: any = randomPost;
+    const derivedSubreddit = (typeof pAny.subredditName === 'string' && pAny.subredditName)
+      || (typeof pAny.subreddit === 'string' && pAny.subreddit)
+      || subredditName;
+
     const redditPost: RedditPost = {
       id: randomPost!.id,
       title: randomPost!.title,
       author: randomPost!.authorName || 'unknown',
-      subreddit: subredditName,
+      subreddit: (typeof derivedSubreddit === 'string' ? derivedSubreddit : subredditName),
       createdAt: randomPost!.createdAt.getTime(),
       score: randomPost!.score,
       ...(commentCount !== undefined && { commentCount }),
