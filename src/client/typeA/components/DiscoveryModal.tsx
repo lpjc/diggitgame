@@ -224,7 +224,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                       {isClaiming ? 'Claiming...' : 'Claim!'}
                     </button>
                     <button
-                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/new/')}
+                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame/new/')}
                       className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-semibold"
                     >
                       Explore More
@@ -233,13 +233,13 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/new/')}
+                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame/new/')}
                       className="px-4 py-2 rounded-md bg-orange-500/90 hover:bg-orange-500 text-white text-sm font-semibold"
                     >
                       Go to Museum
                     </button>
                     <button
-                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/new/')}
+                      onClick={() => navigateTo('https://www.reddit.com/r/diggitgame/new/')}
                       className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-semibold"
                     >
                       Explore More
@@ -307,7 +307,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
                 Explore New Site
               </button>
               <button
-                onClick={() => navigateTo('https://www.reddit.com/r/diggitgame_dev/comments/1oi49ga/the_museum/')}
+                onClick={() => navigateTo('https://www.reddit.com/r/diggitgame/new/')}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors text-sm"
               >
                 View Your Museum
